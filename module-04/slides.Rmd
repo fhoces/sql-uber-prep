@@ -1,0 +1,245 @@
+---
+title: "Module 4: Subqueries and CTEs"
+subtitle: "Organizing multi-step queries"
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts]
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+```{css, echo=FALSE}
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", message = FALSE, warning = FALSE)
+library(DBI); library(RSQLite); library(tidyverse)
+con <- dbConnect(SQLite(), "../data/uber.sqlite")
+knitr::opts_chunk$set(connection = "con")
+```
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
+<tr><td><b>4</b></td><td><b>Subqueries and CTEs</b> <i>(you are here)</i></td><td>← current</td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+</table>
+
+---
+
+# Why You Need Them
+
+Once a query gets past ~5 lines, you need a way to organize intermediate results. SQL gives you two:
+
+--
+
+- **Subqueries** — a query inside another query
+- **Common Table Expressions (CTEs)** — named subqueries, top-to-bottom
+
+--
+
+Both compile to similar plans. **Default to CTEs** — they're more readable, easier to debug, and let you build complex queries in clean steps.
+
+---
+
+# Three Subquery Flavors
+
+**Scalar:** returns one value, used like a constant.
+
+```sql
+SELECT * FROM rides WHERE fare_usd > (SELECT AVG(fare_usd) FROM rides);
+```
+
+--
+
+**Table:** returns a table, used in `FROM`.
+
+```sql
+SELECT * FROM (
+  SELECT driver_id, COUNT(*) AS n FROM rides GROUP BY driver_id
+) t WHERE t.n > 100;
+```
+
+--
+
+**Correlated:** references the outer query, runs once per outer row. Convenient but slow.
+
+```sql
+SELECT d.*, (SELECT COUNT(*) FROM rides r WHERE r.driver_id = d.driver_id) AS n
+FROM   drivers d;
+```
+
+---
+
+# CTEs
+
+```sql
+WITH driver_rides AS (
+  SELECT driver_id, COUNT(*) AS n_rides
+  FROM   rides
+  GROUP BY driver_id
+)
+SELECT * FROM driver_rides WHERE n_rides > 100;
+```
+
+--
+
+Multiple CTEs:
+
+```sql
+WITH
+  cte1 AS (...),
+  cte2 AS (...),
+  cte3 AS (...)
+SELECT * FROM cte3;
+```
+
+--
+
+Each CTE = one logical step. Read top-to-bottom like a script.
+
+---
+
+# Pattern: First / Last / Only
+
+"Each rider's first ride and the city it was in":
+
+```{sql first, eval=TRUE}
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
+  FROM   rides r
+  JOIN   requests req ON r.request_id = req.request_id
+  GROUP BY req.rider_id
+)
+SELECT fr.rider_id, fr.first_started_at, c.name AS first_city
+FROM   first_ride fr
+JOIN   rides r ON r.started_at = fr.first_started_at
+JOIN   requests req ON r.request_id = req.request_id
+JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN   cities c ON n.city_id = c.city_id
+LIMIT 5;
+```
+
+---
+
+# Pattern: Multi-Step Funnel
+
+```sql
+WITH dec_requests AS (
+  SELECT request_id, rider_id FROM requests
+  WHERE date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+),
+dec_rides AS (
+  SELECT dr.*, r.ride_id, r.rider_rating
+  FROM dec_requests dr LEFT JOIN rides r ON dr.request_id = r.request_id
+),
+funnel AS (
+  SELECT
+    COUNT(*) AS n_requests,
+    SUM(CASE WHEN ride_id IS NOT NULL THEN 1 ELSE 0 END) AS n_completed,
+    SUM(CASE WHEN rider_rating = 5 THEN 1 ELSE 0 END) AS n_5star
+  FROM dec_rides
+)
+SELECT * FROM funnel;
+```
+
+--
+
+The pattern: each CTE is a step. Easy to test in isolation.
+
+---
+
+# Pattern: Active in Last N Periods
+
+```{sql active-n, eval=TRUE}
+WITH active AS (
+  SELECT DISTINCT
+    rider_id,
+    strftime('%Y-%W', requested_at) AS week
+  FROM   requests
+  WHERE  date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+)
+SELECT rider_id, COUNT(DISTINCT week) AS weeks_active
+FROM   active
+GROUP BY rider_id
+HAVING COUNT(DISTINCT week) >= 4
+LIMIT 5;
+```
+
+--
+
+Trick: collapse each request to its week, then `HAVING COUNT(DISTINCT week) = N`.
+
+---
+
+# CTE vs Subquery
+
+| Situation | Use |
+|---|---|
+| Reference the same intermediate twice | **CTE** |
+| ≥ 3 logical steps | **CTE** |
+| Need a single value in WHERE | **Scalar subquery** |
+| One-line intermediate | **Subquery** |
+| Need recursion | **Recursive CTE** |
+
+--
+
+In modern SQL, **default to CTEs**.
+
+---
+
+# Common Traps
+
+**1.** Forgetting to JOIN back to the original after a CTE. The CTE has the rider_id and date, but you also wanted the city — you need a second join.
+
+--
+
+**2.** CTEs that aren't materialized. In Postgres < v12 they were materialized; after, they're inlined. SQLite inlines them. Don't expect a CTE to act as a memoization cache.
+
+--
+
+**3.** Naming collisions. `WITH rides AS (...)` shadows the real `rides` table. Be careful.
+
+---
+class: inverse
+
+# The Key Takeaways
+
+<br>
+
+### 1. CTEs let you write 30-line queries as a chain of named steps. Default to them.
+
+--
+
+<br>
+
+### 2. The first/last pattern: a CTE finds the extremum, then a join attaches the rest of the row.
+
+--
+
+<br>
+
+### 3. Module 5 (window functions) replaces many of these patterns with one-liners — but the CTE approach works in any dialect.
+
+---
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
+<tr><td>4</td><td>Subqueries and CTEs <i>(just finished)</i></td><td>✓ done</td></tr>
+<tr><td><b>5</b></td><td><b>Window Functions</b></td><td>next</td></tr>
+</table>

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Module 3: GROUP BY, HAVING, Conversion Funnels</title>
+    <meta charset="utf-8" />
+    <script src="slides_files/header-attrs-2.29/header-attrs.js"></script>
+    <link href="slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="slides_files/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Module 3: GROUP BY, HAVING, Conversion Funnels
+]
+.subtitle[
+## The patterns you’ll write over and over
+]
+
+---
+
+
+&lt;style type="text/css"&gt;
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+&lt;/style&gt;
+
+
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;GROUP BY, HAVING, Conversion Funnels&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+---
+
+# Six Patterns to Memorize
+
+1. **City-level dashboard** (one row per city, many metrics)
+2. **Compare-to-global** (HAVING with a subquery)
+3. **Conversion funnel** (CASE WHEN counts at each step)
+4. **Per-group ranking** (correlated subquery; window function later)
+5. **Cohort retention** (signup-month × activity-month)
+6. **Bottom-N within group**
+
+If you can write all six from memory, you're past the bar for any data job interview.
+
+---
+
+# Pattern 1: City-Level Dashboard
+
+
+```sql
+SELECT
+  c.name                            AS city,
+  COUNT(DISTINCT r.driver_id)       AS active_drivers,
+  COUNT(*)                          AS n_rides,
+  ROUND(AVG(r.fare_usd), 2)         AS avg_fare,
+  ROUND(SUM(r.fare_usd), 0)         AS total_revenue
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+GROUP BY c.name
+ORDER BY total_revenue DESC;
+```
+
+
+
+
+Table: 5 records
+
+|city          | active_drivers| n_rides| avg_fare| total_revenue|
+|:-------------|--------------:|-------:|--------:|-------------:|
+|Chicago       |            800|    7946|    12.03|         95614|
+|Boston        |            800|    7906|    12.04|         95211|
+|Austin        |            800|    7780|    12.03|         93611|
+|San Francisco |            800|    7668|    12.02|         92140|
+|Seattle       |            800|    7700|    11.94|         91929|
+
+---
+
+# Pattern 2: Compare to the Global Average
+
+
+```sql
+SELECT c.name AS city,
+       ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+       (SELECT ROUND(AVG(fare_usd), 2) FROM rides) AS global_avg
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+GROUP BY c.name
+HAVING AVG(r.fare_usd) &gt; (SELECT AVG(fare_usd) FROM rides)
+ORDER BY avg_fare DESC;
+```
+
+
+
+
+Table: 4 records
+
+|city          | avg_fare| global_avg|
+|:-------------|--------:|----------:|
+|Boston        |    12.04|      12.01|
+|Chicago       |    12.03|      12.01|
+|Austin        |    12.03|      12.01|
+|San Francisco |    12.02|      12.01|
+
+--
+
+The trick: a scalar subquery in `HAVING` for the global benchmark.
+
+---
+
+# Pattern 3: Conversion Funnel
+
+
+```sql
+SELECT
+  COUNT(*)                                                AS step1_requests,
+  SUM(CASE WHEN req.accepted = 1 THEN 1 ELSE 0 END)       AS step2_accepted,
+  SUM(CASE WHEN r.ride_id IS NOT NULL THEN 1 ELSE 0 END)  AS step3_completed,
+  SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END)     AS step4_5star,
+  ROUND(1.0 * SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END) /
+        COUNT(*), 3) AS overall_conv
+FROM requests req
+LEFT JOIN rides r ON req.request_id = r.request_id;
+```
+
+
+
+
+Table: 1 records
+
+| step1_requests| step2_accepted| step3_completed| step4_5star| overall_conv|
+|--------------:|--------------:|---------------:|-----------:|------------:|
+|          50000|          39000|           39000|       23536|        0.471|
+
+--
+
+The pattern: `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` counts qualifying rows at each step. Divide to get conversion rates.
+
+---
+
+# Pattern 4: Cohort Retention
+
+
+```sql
+WITH cohort AS (
+  SELECT rider_id, strftime('%Y-%m', signup_date) AS cohort_month
+  FROM   riders
+),
+activity AS (
+  SELECT DISTINCT rider_id, strftime('%Y-%m', requested_at) AS activity_month
+  FROM   requests
+)
+SELECT c.cohort_month,
+       a.activity_month,
+       COUNT(DISTINCT c.rider_id) AS active_riders
+FROM   cohort c
+JOIN   activity a ON c.rider_id = a.rider_id
+GROUP BY c.cohort_month, a.activity_month
+ORDER BY c.cohort_month, a.activity_month
+LIMIT 6;
+```
+
+
+
+
+Table: 6 records
+
+|cohort_month |activity_month | active_riders|
+|:------------|:--------------|-------------:|
+|-4657-01     |2025-01        |            57|
+|-4657-01     |2025-02        |            55|
+|-4657-01     |2025-03        |            58|
+|-4657-01     |2025-04        |            55|
+|-4657-01     |2025-05        |            61|
+|-4657-01     |2025-06        |            62|
+
+---
+
+# Common Traps
+
+**1. Selecting non-aggregated columns without grouping.** Strict SQL errors out; SQLite picks an arbitrary value (which is worse).
+
+--
+
+**2. `COUNT` vs `COUNT(DISTINCT)`.** `COUNT(*)` counts rows. `COUNT(DISTINCT col)` counts unique values. Always be deliberate.
+
+--
+
+**3. Counting "users" after a JOIN.** Joins multiply rows. `COUNT(rider_id)` after a join counts *rides*, not riders. Use `COUNT(DISTINCT rider_id)`.
+
+--
+
+**4. Filtering aggregates in `WHERE`.** Doesn't work. Use `HAVING`.
+
+---
+class: inverse
+
+# The Key Takeaways
+
+&lt;br&gt;
+
+### 1. The six patterns above cover almost every analytical query you'll write.
+
+--
+
+&lt;br&gt;
+
+### 2. WHERE filters rows; HAVING filters groups. Aggregates can only live in HAVING.
+
+--
+
+&lt;br&gt;
+
+### 3. CASE WHEN inside an aggregate is the SQL idiom for `mean(condition)`. Memorize it.
+
+---
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;GROUP BY, HAVING, Conversion Funnels &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Subqueries and CTEs&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Module 4: Subqueries and CTEs</title>
+    <meta charset="utf-8" />
+    <script src="slides_files/header-attrs-2.29/header-attrs.js"></script>
+    <link href="slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="slides_files/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Module 4: Subqueries and CTEs
+]
+.subtitle[
+## Organizing multi-step queries
+]
+
+---
+
+
+&lt;style type="text/css"&gt;
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+&lt;/style&gt;
+
+
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Subqueries and CTEs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+---
+
+# Why You Need Them
+
+Once a query gets past ~5 lines, you need a way to organize intermediate results. SQL gives you two:
+
+--
+
+- **Subqueries** — a query inside another query
+- **Common Table Expressions (CTEs)** — named subqueries, top-to-bottom
+
+--
+
+Both compile to similar plans. **Default to CTEs** — they're more readable, easier to debug, and let you build complex queries in clean steps.
+
+---
+
+# Three Subquery Flavors
+
+**Scalar:** returns one value, used like a constant.
+
+```sql
+SELECT * FROM rides WHERE fare_usd &gt; (SELECT AVG(fare_usd) FROM rides);
+```
+
+--
+
+**Table:** returns a table, used in `FROM`.
+
+```sql
+SELECT * FROM (
+  SELECT driver_id, COUNT(*) AS n FROM rides GROUP BY driver_id
+) t WHERE t.n &gt; 100;
+```
+
+--
+
+**Correlated:** references the outer query, runs once per outer row. Convenient but slow.
+
+```sql
+SELECT d.*, (SELECT COUNT(*) FROM rides r WHERE r.driver_id = d.driver_id) AS n
+FROM   drivers d;
+```
+
+---
+
+# CTEs
+
+```sql
+WITH driver_rides AS (
+  SELECT driver_id, COUNT(*) AS n_rides
+  FROM   rides
+  GROUP BY driver_id
+)
+SELECT * FROM driver_rides WHERE n_rides &gt; 100;
+```
+
+--
+
+Multiple CTEs:
+
+```sql
+WITH
+  cte1 AS (...),
+  cte2 AS (...),
+  cte3 AS (...)
+SELECT * FROM cte3;
+```
+
+--
+
+Each CTE = one logical step. Read top-to-bottom like a script.
+
+---
+
+# Pattern: First / Last / Only
+
+"Each rider's first ride and the city it was in":
+
+
+```sql
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
+  FROM   rides r
+  JOIN   requests req ON r.request_id = req.request_id
+  GROUP BY req.rider_id
+)
+SELECT fr.rider_id, fr.first_started_at, c.name AS first_city
+FROM   first_ride fr
+JOIN   rides r ON r.started_at = fr.first_started_at
+JOIN   requests req ON r.request_id = req.request_id
+JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN   cities c ON n.city_id = c.city_id
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+|rider_id |first_started_at           |first_city    |
+|:--------|:--------------------------|:-------------|
+|1        |2025-01-02 00:02:41.797299 |Seattle       |
+|2        |2025-02-24 00:06:54.242272 |Chicago       |
+|3        |2025-01-01 00:06:35.287335 |Seattle       |
+|4        |2025-01-14 00:07:28.482105 |Austin        |
+|5        |2025-01-13 00:02:14.530504 |San Francisco |
+
+---
+
+# Pattern: Multi-Step Funnel
+
+```sql
+WITH dec_requests AS (
+  SELECT request_id, rider_id FROM requests
+  WHERE date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+),
+dec_rides AS (
+  SELECT dr.*, r.ride_id, r.rider_rating
+  FROM dec_requests dr LEFT JOIN rides r ON dr.request_id = r.request_id
+),
+funnel AS (
+  SELECT
+    COUNT(*) AS n_requests,
+    SUM(CASE WHEN ride_id IS NOT NULL THEN 1 ELSE 0 END) AS n_completed,
+    SUM(CASE WHEN rider_rating = 5 THEN 1 ELSE 0 END) AS n_5star
+  FROM dec_rides
+)
+SELECT * FROM funnel;
+```
+
+--
+
+The pattern: each CTE is a step. Easy to test in isolation.
+
+---
+
+# Pattern: Active in Last N Periods
+
+
+```sql
+WITH active AS (
+  SELECT DISTINCT
+    rider_id,
+    strftime('%Y-%W', requested_at) AS week
+  FROM   requests
+  WHERE  date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+)
+SELECT rider_id, COUNT(DISTINCT week) AS weeks_active
+FROM   active
+GROUP BY rider_id
+HAVING COUNT(DISTINCT week) &gt;= 4
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+| rider_id| weeks_active|
+|--------:|------------:|
+|       11|            4|
+|       16|            5|
+|       58|            4|
+|      265|            4|
+|      344|            4|
+
+--
+
+Trick: collapse each request to its week, then `HAVING COUNT(DISTINCT week) = N`.
+
+---
+
+# CTE vs Subquery
+
+| Situation | Use |
+|---|---|
+| Reference the same intermediate twice | **CTE** |
+| ≥ 3 logical steps | **CTE** |
+| Need a single value in WHERE | **Scalar subquery** |
+| One-line intermediate | **Subquery** |
+| Need recursion | **Recursive CTE** |
+
+--
+
+In modern SQL, **default to CTEs**.
+
+---
+
+# Common Traps
+
+**1.** Forgetting to JOIN back to the original after a CTE. The CTE has the rider_id and date, but you also wanted the city — you need a second join.
+
+--
+
+**2.** CTEs that aren't materialized. In Postgres &lt; v12 they were materialized; after, they're inlined. SQLite inlines them. Don't expect a CTE to act as a memoization cache.
+
+--
+
+**3.** Naming collisions. `WITH rides AS (...)` shadows the real `rides` table. Be careful.
+
+---
+class: inverse
+
+# The Key Takeaways
+
+&lt;br&gt;
+
+### 1. CTEs let you write 30-line queries as a chain of named steps. Default to them.
+
+--
+
+&lt;br&gt;
+
+### 2. The first/last pattern: a CTE finds the extremum, then a join attaches the rest of the row.
+
+--
+
+&lt;br&gt;
+
+### 3. Module 5 (window functions) replaces many of these patterns with one-liners — but the CTE approach works in any dialect.
+
+---
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;5&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Window Functions&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Module 1: SELECT, WHERE, Aggregates</title>
+    <meta charset="utf-8" />
+    <script src="slides_files/header-attrs-2.29/header-attrs.js"></script>
+    <link href="slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="slides_files/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Module 1: SELECT, WHERE, Aggregates
+]
+.subtitle[
+## The 80% of SQL you’ll use every day
+]
+
+---
+
+
+&lt;style type="text/css"&gt;
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+&lt;/style&gt;
+
+
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;SELECT, WHERE, Aggregates&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;JOINs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;GROUP BY, HAVING, Conversion Funnels&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+---
+
+# What This Course Is
+
+A 5-module SQL refresher targeted at the Uber **policy economist** interview.
+
+--
+
+- **Database:** SQLite (`data/uber.sqlite`), built by `Rscript data/setup.R`
+- **Schema:** rides, requests, drivers, riders, neighborhoods, cities
+- **Format:** every module is concept → code → 3-5 interview-style questions
+- **Goal:** be able to write the canonical analytical queries from a cold start
+
+--
+
+This module is the warm-up: SELECT, WHERE, simple aggregates, sorting, LIMIT.
+
+---
+
+# The Schema
+
+```
+cities         (city_id, name, country, lead_pm)
+neighborhoods  (nbhd_id, city_id, name, pct_minority, median_income)
+drivers        (driver_id, signup_date, gender, home_nbhd_id)
+riders         (rider_id, signup_date, home_nbhd_id)
+requests       (request_id, rider_id, pickup_nbhd_id, dropoff_nbhd_id,
+                requested_at, accepted, accepted_by_driver_id)
+rides          (ride_id, request_id, driver_id, started_at, ended_at,
+                distance_mi, fare_usd, surge_mult, rider_rating)
+```
+
+--
+
+This schema mirrors the kinds of tables you'd see at any rideshare. The
+exercises in this course are designed so the queries you learn here
+generalize to any platform with a similar data model.
+
+---
+
+# The Core Syntax
+
+```sql
+SELECT col1, col2, agg_func(col3) AS result_name
+FROM   table_name
+WHERE  some_condition
+GROUP BY col1, col2
+HAVING aggregate_condition
+ORDER BY col1 DESC
+LIMIT 10;
+```
+
+--
+
+**Logical execution order** (different from written order):
+
+`FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` → `LIMIT`
+
+--
+
+This matters: `WHERE` happens **before** the SELECT clause, so you can't reference column aliases in `WHERE`. `ORDER BY` happens **after** SELECT, so you can.
+
+---
+
+# Five Things to Remember
+
+**1. `COUNT(*)` vs `COUNT(col)`** — `COUNT(*)` counts rows; `COUNT(col)` skips NULLs in `col`.
+
+--
+
+**2. `COUNT(DISTINCT col)`** — the most common non-trivial aggregate.
+
+--
+
+**3. `AVG` and `SUM` ignore NULLs.** Usually what you want. If not, wrap in `COALESCE(col, 0)`.
+
+--
+
+**4. `WHERE` filters rows; `HAVING` filters groups.** No aggregates in `WHERE`.
+
+--
+
+**5. `LIMIT` is *not* a sample.** It's the first N rows after `ORDER BY`. Without sorting, the order is undefined.
+
+---
+
+# Date Handling in SQLite
+
+```sql
+date(col)                          -- '2025-01-15'
+strftime('%Y-%m', col)             -- '2025-01'
+strftime('%w', col)                -- day of week (0=Sun)
+strftime('%H', col)                -- hour of day
+date(col, 'start of month')        -- first of the month
+date(col, '-7 days')               -- a week ago
+julianday(b) - julianday(a)        -- day difference
+```
+
+--
+
+In Postgres or MySQL the syntax is different (`DATE_TRUNC`, `EXTRACT`), but the patterns are the same. If your interviewer uses a different dialect, just ask.
+
+---
+
+# Pattern: Top-N
+
+
+```sql
+SELECT ride_id, driver_id, distance_mi, fare_usd
+FROM   rides
+ORDER BY distance_mi DESC
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+| ride_id| driver_id| distance_mi| fare_usd|
+|-------:|---------:|-----------:|--------:|
+|   28699|       744|       36.82|    90.87|
+|   11316|       157|       30.26|    73.29|
+|   35411|       800|       29.30|    47.41|
+|    5731|       468|       29.11|    45.44|
+|     313|       532|       28.87|    65.01|
+
+--
+
+The two essentials: an `ORDER BY` and a `LIMIT`. Forget the `ORDER BY` and you'll get five arbitrary rows.
+
+---
+
+# Pattern: Filtered Aggregate
+
+
+```sql
+SELECT COUNT(*) AS rides_dec, AVG(fare_usd) AS avg_fare
+FROM   rides
+WHERE  date(started_at) BETWEEN '2025-12-01' AND '2025-12-31';
+```
+
+
+
+
+Table: 1 records
+
+| rides_dec| avg_fare|
+|---------:|--------:|
+|      3293| 11.84622|
+
+--
+
+`WHERE` happens before aggregation, so this counts December rides and averages their fares.
+
+---
+
+# Pattern: Group By + Having
+
+**Drivers with at least 100 rides in 2025**:
+
+
+```sql
+SELECT driver_id, COUNT(*) AS n_rides
+FROM   rides
+WHERE  date(started_at) BETWEEN '2025-01-01' AND '2025-12-31'
+GROUP BY driver_id
+HAVING COUNT(*) &gt;= 100
+ORDER BY n_rides DESC
+LIMIT 5;
+```
+
+
+
+
+Table: 0 records
+
+| driver_id|n_rides |
+|---------:|:-------|
+
+--
+
+**Don't put `COUNT(*) &gt;= 100` in `WHERE`** — aggregates don't exist there yet. `HAVING` is the post-aggregation filter.
+
+---
+
+# Pattern: Conditional Counts
+
+
+```sql
+SELECT
+  COUNT(*) AS total,
+  SUM(CASE WHEN accepted = 1 THEN 1 ELSE 0 END) AS accepted_count,
+  ROUND(AVG(CASE WHEN accepted = 1 THEN 1.0 ELSE 0 END), 3) AS accept_rate
+FROM requests;
+```
+
+
+
+
+Table: 1 records
+
+| total| accepted_count| accept_rate|
+|-----:|--------------:|-----------:|
+| 50000|          39000|        0.78|
+
+--
+
+The `CASE WHEN ... THEN 1 ELSE 0 END` trick is the SQL version of `mean(x == "foo")` in R. **Memorize it** — you'll use it constantly.
+
+---
+
+# Common Traps
+
+- **Integer division:** `SUM(x) / COUNT(*)` → 0 if both are integers and the result &lt; 1. Always cast: `1.0 * SUM(x) / COUNT(*)`
+
+--
+
+- **NULLs in `AVG`:** ignored, not zeroed. `AVG(fare_usd)` on 100 rows with 50 NULLs averages over the 50 non-NULL rows.
+
+--
+
+- **Column aliases in `WHERE`:** doesn't work. Repeat the expression or wrap in a subquery.
+
+--
+
+- **`BETWEEN` is inclusive on both ends.** `WHERE x BETWEEN 1 AND 10` is `x &gt;= 1 AND x &lt;= 10`.
+
+--
+
+- **Case-sensitive string comparison.** Use `LOWER()` or `COLLATE NOCASE`.
+
+---
+class: inverse, center, middle
+
+# Interview Questions
+### How fast can you write each one?
+
+---
+
+# Q1. Average fare by hour of day
+
+
+```sql
+SELECT strftime('%H', started_at) AS hour,
+       ROUND(AVG(fare_usd), 2)    AS avg_fare,
+       COUNT(*)                   AS n_rides
+FROM   rides
+GROUP BY hour
+ORDER BY hour
+LIMIT 6;
+```
+
+
+
+
+Table: 1 records
+
+|hour | avg_fare| n_rides|
+|:----|--------:|-------:|
+|00   |    12.01|   39000|
+
+---
+
+# Q2. Monthly conversion rate
+
+
+```sql
+SELECT strftime('%Y-%m', requested_at) AS month,
+       COUNT(*)                         AS n_requests,
+       SUM(accepted)                    AS n_accepted,
+       ROUND(1.0 * SUM(accepted) / COUNT(*), 3) AS accept_rate
+FROM   requests
+GROUP BY month
+ORDER BY month
+LIMIT 6;
+```
+
+
+
+
+Table: 6 records
+
+|month   | n_requests| n_accepted| accept_rate|
+|:-------|----------:|----------:|-----------:|
+|2025-01 |       4251|       3307|       0.778|
+|2025-02 |       3818|       2970|       0.778|
+|2025-03 |       4227|       3321|       0.786|
+|2025-04 |       4109|       3195|       0.778|
+|2025-05 |       4228|       3249|       0.768|
+|2025-06 |       4199|       3311|       0.789|
+
+---
+
+# Q3. Surge frequency
+
+
+```sql
+SELECT
+  COUNT(*) AS total_rides,
+  SUM(CASE WHEN surge_mult &gt; 1.0 THEN 1 ELSE 0 END) AS surged_rides,
+  ROUND(1.0 * SUM(CASE WHEN surge_mult &gt; 1.0 THEN 1 ELSE 0 END) / COUNT(*), 3)
+    AS pct_surged,
+  ROUND(AVG(surge_mult), 3) AS avg_surge_mult
+FROM rides;
+```
+
+
+
+
+Table: 1 records
+
+| total_rides| surged_rides| pct_surged| avg_surge_mult|
+|-----------:|------------:|----------:|--------------:|
+|       39000|        28949|      0.742|          1.246|
+
+---
+class: inverse
+
+# The Key Takeaways
+
+&lt;br&gt;
+
+### 1. SELECT / WHERE / GROUP BY / HAVING / ORDER BY / LIMIT — the six clauses cover ~80% of analytical work
+
+--
+
+&lt;br&gt;
+
+### 2. The CASE WHEN aggregate trick is the SQL equivalent of dplyr's `mean(x == "foo")`. Memorize it.
+
+--
+
+&lt;br&gt;
+
+### 3. Watch out for integer division, NULL handling, and column aliases in WHERE.
+
+---
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;SELECT, WHERE, Aggregates &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;JOINs&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;GROUP BY, HAVING, Conversion Funnels&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

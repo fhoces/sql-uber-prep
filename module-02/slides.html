@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Module 2: JOINs</title>
+    <meta charset="utf-8" />
+    <script src="slides_files/header-attrs-2.29/header-attrs.js"></script>
+    <link href="slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="slides_files/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Module 2: JOINs
+]
+.subtitle[
+## The single most important SQL skill after SELECT
+]
+
+---
+
+
+&lt;style type="text/css"&gt;
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+&lt;/style&gt;
+
+
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;JOINs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;GROUP BY, HAVING, Conversion Funnels&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+---
+
+# The Four Flavors
+
+| JOIN type | Returns |
+|---|---|
+| `INNER JOIN` (or `JOIN`) | Only rows matched in both tables |
+| `LEFT JOIN` | All left rows; right rows where matched (NULL otherwise) |
+| `RIGHT JOIN` | All right rows; left where matched (rarely used — flip and use LEFT) |
+| `FULL OUTER JOIN` | All rows from both; NULLs where no match |
+
+--
+
+**The fifth pattern:** anti-join — "rows in A that have NO match in B". There's no `ANTI JOIN` keyword. You do it with `LEFT JOIN ... WHERE B.id IS NULL` or `NOT EXISTS`.
+
+---
+
+# Syntax
+
+```sql
+SELECT  a.col1, b.col2
+FROM    table_a AS a
+JOIN    table_b AS b
+  ON    a.fk = b.pk
+WHERE   ...;
+```
+
+--
+
+Three things:
+
+1. **Always use table aliases** (`a`, `b`). Shorter, disambiguates same-named columns.
+2. **`ON` is the join condition** — anything that evaluates TRUE/FALSE works, including non-equality.
+3. **`USING (col)`** is shorthand for `ON a.col = b.col` when names match.
+
+---
+
+# Pattern: Inner JOIN
+
+
+```sql
+SELECT r.ride_id, d.gender, r.fare_usd
+FROM   rides r
+JOIN   drivers d ON r.driver_id = d.driver_id
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+|ride_id |gender | fare_usd|
+|:-------|:------|--------:|
+|1       |F      |    16.52|
+|2       |M      |    19.78|
+|3       |M      |    26.97|
+|4       |M      |    13.68|
+|5       |M      |    16.65|
+
+--
+
+One row per ride, with the driver's gender attached. Equivalent to dplyr's `inner_join(rides, drivers, by = "driver_id")`.
+
+---
+
+# Pattern: LEFT JOIN
+
+
+```sql
+SELECT req.request_id, req.accepted, r.fare_usd
+FROM   requests req
+LEFT JOIN rides r ON req.request_id = r.request_id
+WHERE  req.accepted = 0
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+| request_id| accepted| fare_usd|
+|----------:|--------:|--------:|
+|          6|        0|       NA|
+|          7|        0|       NA|
+|          8|        0|       NA|
+|         15|        0|       NA|
+|         21|        0|       NA|
+
+--
+
+All requests, with the ride info if it exists. **Unaccepted requests have NULL for `fare_usd`** because there's no matching row in `rides`.
+
+---
+
+# Pattern: Anti-Join
+
+"Drivers who have never had a ride from a high-minority neighborhood":
+
+
+```sql
+SELECT d.driver_id
+FROM   drivers d
+WHERE  NOT EXISTS (
+  SELECT 1
+  FROM   rides r
+  JOIN   requests req ON r.request_id = req.request_id
+  JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+  WHERE  r.driver_id = d.driver_id
+    AND  n.pct_minority &gt;= 0.5
+)
+LIMIT 5;
+```
+
+
+
+
+Table: 0 records
+
+| driver_id|
+|---------:|
+
+---
+
+# Pattern: Multi-table chain
+
+
+```sql
+SELECT c.name AS city,
+       COUNT(*) AS n_rides,
+       ROUND(AVG(r.fare_usd), 2) AS avg_fare
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN   cities c ON n.city_id = c.city_id
+GROUP BY c.name
+ORDER BY n_rides DESC;
+```
+
+
+
+
+Table: 5 records
+
+|city          | n_rides| avg_fare|
+|:-------------|-------:|--------:|
+|Chicago       |    7946|    12.03|
+|Boston        |    7906|    12.04|
+|Austin        |    7780|    12.03|
+|Seattle       |    7700|    11.94|
+|San Francisco |    7668|    12.02|
+
+--
+
+Build chains step-by-step. Don't try to write a 5-table join from scratch.
+
+---
+
+# Common Traps
+
+**1. Cartesian explosion.** Forget the `ON` clause and you get every row in A paired with every row in B. With 39k rides × 800 drivers = 31M rows. **Always check the join before running.**
+
+--
+
+**2. Inner join silently dropping rows.** If 5% of rides have a `driver_id` that doesn't exist in `drivers`, an inner join drops them silently. The honest pattern is LEFT JOIN + check for NULLs.
+
+--
+
+**3. Aggregating after a join.** Joining can multiply rows. Always check: one-to-one, one-to-many, or many-to-many?
+
+--
+
+**4. Filtering on the right side of a LEFT JOIN.** Putting `WHERE r.fare_usd &gt; 20` after a `LEFT JOIN rides r` silently turns it into an INNER JOIN — because it filters out the NULL rows. Put the filter in `ON` instead.
+
+---
+class: inverse, center, middle
+
+# Interview Questions
+
+---
+
+# Q1. Unique drivers per rider
+
+
+```sql
+SELECT req.rider_id,
+       COUNT(DISTINCT r.driver_id) AS n_unique_drivers,
+       COUNT(*)                    AS n_rides
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+GROUP BY req.rider_id
+ORDER BY n_unique_drivers DESC
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+| rider_id| n_unique_drivers| n_rides|
+|--------:|----------------:|-------:|
+|     2340|               23|      23|
+|     1163|               21|      21|
+|      854|               21|      21|
+|      458|               21|      21|
+|     3085|               20|      20|
+
+---
+
+# Q2. Each ride attached to driver tenure
+
+
+```sql
+SELECT r.ride_id,
+       r.driver_id,
+       date(r.started_at) AS ride_date,
+       julianday(r.started_at) - julianday(d.signup_date) AS tenure_days
+FROM   rides r
+JOIN   drivers d ON r.driver_id = d.driver_id
+ORDER BY r.ride_id
+LIMIT 5;
+```
+
+
+
+
+Table: 5 records
+
+|ride_id | driver_id|ride_date  | tenure_days|
+|:-------|---------:|:----------|-----------:|
+|1       |       429|2025-08-19 |     2441622|
+|2       |        83|2025-08-19 |     2441808|
+|3       |       535|2025-01-04 |     2440450|
+|4       |       101|2025-08-05 |     2441560|
+|5       |        85|2025-06-13 |     2441286|
+
+---
+
+# Q3. Rider-driver pairs with 3+ 5-star ratings
+
+
+```sql
+SELECT req.rider_id, r.driver_id, COUNT(*) AS n_5star
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+WHERE  r.rider_rating = 5
+GROUP BY req.rider_id, r.driver_id
+HAVING COUNT(*) &gt;= 3
+ORDER BY n_5star DESC
+LIMIT 5;
+```
+
+
+
+
+Table: 0 records
+
+| rider_id| driver_id|n_5star |
+|--------:|---------:|:-------|
+
+---
+class: inverse
+
+# The Key Takeaways
+
+&lt;br&gt;
+
+### 1. INNER, LEFT, anti-join — you'll use these three constantly. RIGHT and FULL OUTER, almost never.
+
+--
+
+&lt;br&gt;
+
+### 2. The most common bug: filtering the right side of a LEFT JOIN in WHERE. Always put it in ON.
+
+--
+
+&lt;br&gt;
+
+### 3. Build multi-table joins one step at a time. Don't try to write 5-table joins from scratch.
+
+---
+
+# Course Map
+
+&lt;table&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;JOINs &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;GROUP BY, HAVING, Conversion Funnels&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

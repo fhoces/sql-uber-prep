@@ -1,0 +1,244 @@
+---
+title: "Module 2: JOINs"
+subtitle: "The single most important SQL skill after SELECT"
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts]
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+```{css, echo=FALSE}
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", message = FALSE, warning = FALSE)
+library(DBI); library(RSQLite); library(tidyverse)
+con <- dbConnect(SQLite(), "../data/uber.sqlite")
+knitr::opts_chunk$set(connection = "con")
+```
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td><b>2</b></td><td><b>JOINs</b> <i>(you are here)</i></td><td>← current</td></tr>
+<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+</table>
+
+---
+
+# The Four Flavors
+
+| JOIN type | Returns |
+|---|---|
+| `INNER JOIN` (or `JOIN`) | Only rows matched in both tables |
+| `LEFT JOIN` | All left rows; right rows where matched (NULL otherwise) |
+| `RIGHT JOIN` | All right rows; left where matched (rarely used — flip and use LEFT) |
+| `FULL OUTER JOIN` | All rows from both; NULLs where no match |
+
+--
+
+**The fifth pattern:** anti-join — "rows in A that have NO match in B". There's no `ANTI JOIN` keyword. You do it with `LEFT JOIN ... WHERE B.id IS NULL` or `NOT EXISTS`.
+
+---
+
+# Syntax
+
+```sql
+SELECT  a.col1, b.col2
+FROM    table_a AS a
+JOIN    table_b AS b
+  ON    a.fk = b.pk
+WHERE   ...;
+```
+
+--
+
+Three things:
+
+1. **Always use table aliases** (`a`, `b`). Shorter, disambiguates same-named columns.
+2. **`ON` is the join condition** — anything that evaluates TRUE/FALSE works, including non-equality.
+3. **`USING (col)`** is shorthand for `ON a.col = b.col` when names match.
+
+---
+
+# Pattern: Inner JOIN
+
+```{sql inner, eval=TRUE}
+SELECT r.ride_id, d.gender, r.fare_usd
+FROM   rides r
+JOIN   drivers d ON r.driver_id = d.driver_id
+LIMIT 5;
+```
+
+--
+
+One row per ride, with the driver's gender attached. Equivalent to dplyr's `inner_join(rides, drivers, by = "driver_id")`.
+
+---
+
+# Pattern: LEFT JOIN
+
+```{sql left-join, eval=TRUE}
+SELECT req.request_id, req.accepted, r.fare_usd
+FROM   requests req
+LEFT JOIN rides r ON req.request_id = r.request_id
+WHERE  req.accepted = 0
+LIMIT 5;
+```
+
+--
+
+All requests, with the ride info if it exists. **Unaccepted requests have NULL for `fare_usd`** because there's no matching row in `rides`.
+
+---
+
+# Pattern: Anti-Join
+
+"Drivers who have never had a ride from a high-minority neighborhood":
+
+```{sql anti, eval=TRUE}
+SELECT d.driver_id
+FROM   drivers d
+WHERE  NOT EXISTS (
+  SELECT 1
+  FROM   rides r
+  JOIN   requests req ON r.request_id = req.request_id
+  JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+  WHERE  r.driver_id = d.driver_id
+    AND  n.pct_minority >= 0.5
+)
+LIMIT 5;
+```
+
+---
+
+# Pattern: Multi-table chain
+
+```{sql multi, eval=TRUE}
+SELECT c.name AS city,
+       COUNT(*) AS n_rides,
+       ROUND(AVG(r.fare_usd), 2) AS avg_fare
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN   cities c ON n.city_id = c.city_id
+GROUP BY c.name
+ORDER BY n_rides DESC;
+```
+
+--
+
+Build chains step-by-step. Don't try to write a 5-table join from scratch.
+
+---
+
+# Common Traps
+
+**1. Cartesian explosion.** Forget the `ON` clause and you get every row in A paired with every row in B. With 39k rides × 800 drivers = 31M rows. **Always check the join before running.**
+
+--
+
+**2. Inner join silently dropping rows.** If 5% of rides have a `driver_id` that doesn't exist in `drivers`, an inner join drops them silently. The honest pattern is LEFT JOIN + check for NULLs.
+
+--
+
+**3. Aggregating after a join.** Joining can multiply rows. Always check: one-to-one, one-to-many, or many-to-many?
+
+--
+
+**4. Filtering on the right side of a LEFT JOIN.** Putting `WHERE r.fare_usd > 20` after a `LEFT JOIN rides r` silently turns it into an INNER JOIN — because it filters out the NULL rows. Put the filter in `ON` instead.
+
+---
+class: inverse, center, middle
+
+# Interview Questions
+
+---
+
+# Q1. Unique drivers per rider
+
+```{sql q-unique, eval=TRUE}
+SELECT req.rider_id,
+       COUNT(DISTINCT r.driver_id) AS n_unique_drivers,
+       COUNT(*)                    AS n_rides
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+GROUP BY req.rider_id
+ORDER BY n_unique_drivers DESC
+LIMIT 5;
+```
+
+---
+
+# Q2. Each ride attached to driver tenure
+
+```{sql q-tenure, eval=TRUE}
+SELECT r.ride_id,
+       r.driver_id,
+       date(r.started_at) AS ride_date,
+       julianday(r.started_at) - julianday(d.signup_date) AS tenure_days
+FROM   rides r
+JOIN   drivers d ON r.driver_id = d.driver_id
+ORDER BY r.ride_id
+LIMIT 5;
+```
+
+---
+
+# Q3. Rider-driver pairs with 3+ 5-star ratings
+
+```{sql q-pairs, eval=TRUE}
+SELECT req.rider_id, r.driver_id, COUNT(*) AS n_5star
+FROM   rides r
+JOIN   requests req ON r.request_id = req.request_id
+WHERE  r.rider_rating = 5
+GROUP BY req.rider_id, r.driver_id
+HAVING COUNT(*) >= 3
+ORDER BY n_5star DESC
+LIMIT 5;
+```
+
+---
+class: inverse
+
+# The Key Takeaways
+
+<br>
+
+### 1. INNER, LEFT, anti-join — you'll use these three constantly. RIGHT and FULL OUTER, almost never.
+
+--
+
+<br>
+
+### 2. The most common bug: filtering the right side of a LEFT JOIN in WHERE. Always put it in ON.
+
+--
+
+<br>
+
+### 3. Build multi-table joins one step at a time. Don't try to write 5-table joins from scratch.
+
+---
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td>JOINs <i>(just finished)</i></td><td>✓ done</td></tr>
+<tr><td><b>3</b></td><td><b>GROUP BY, HAVING, Conversion Funnels</b></td><td>next</td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+</table>

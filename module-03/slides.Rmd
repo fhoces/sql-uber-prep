@@ -1,0 +1,184 @@
+---
+title: "Module 3: GROUP BY, HAVING, Conversion Funnels"
+subtitle: "The patterns you'll write over and over"
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts]
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+```{css, echo=FALSE}
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", message = FALSE, warning = FALSE)
+library(DBI); library(RSQLite); library(tidyverse)
+con <- dbConnect(SQLite(), "../data/uber.sqlite")
+knitr::opts_chunk$set(connection = "con")
+```
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td><b>3</b></td><td><b>GROUP BY, HAVING, Conversion Funnels</b> <i>(you are here)</i></td><td>← current</td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+</table>
+
+---
+
+# Six Patterns to Memorize
+
+1. **City-level dashboard** (one row per city, many metrics)
+2. **Compare-to-global** (HAVING with a subquery)
+3. **Conversion funnel** (CASE WHEN counts at each step)
+4. **Per-group ranking** (correlated subquery; window function later)
+5. **Cohort retention** (signup-month × activity-month)
+6. **Bottom-N within group**
+
+If you can write all six from memory, you're past the bar for any data job interview.
+
+---
+
+# Pattern 1: City-Level Dashboard
+
+```{sql dash, eval=TRUE}
+SELECT
+  c.name                            AS city,
+  COUNT(DISTINCT r.driver_id)       AS active_drivers,
+  COUNT(*)                          AS n_rides,
+  ROUND(AVG(r.fare_usd), 2)         AS avg_fare,
+  ROUND(SUM(r.fare_usd), 0)         AS total_revenue
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+GROUP BY c.name
+ORDER BY total_revenue DESC;
+```
+
+---
+
+# Pattern 2: Compare to the Global Average
+
+```{sql global, eval=TRUE}
+SELECT c.name AS city,
+       ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+       (SELECT ROUND(AVG(fare_usd), 2) FROM rides) AS global_avg
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+GROUP BY c.name
+HAVING AVG(r.fare_usd) > (SELECT AVG(fare_usd) FROM rides)
+ORDER BY avg_fare DESC;
+```
+
+--
+
+The trick: a scalar subquery in `HAVING` for the global benchmark.
+
+---
+
+# Pattern 3: Conversion Funnel
+
+```{sql funnel, eval=TRUE}
+SELECT
+  COUNT(*)                                                AS step1_requests,
+  SUM(CASE WHEN req.accepted = 1 THEN 1 ELSE 0 END)       AS step2_accepted,
+  SUM(CASE WHEN r.ride_id IS NOT NULL THEN 1 ELSE 0 END)  AS step3_completed,
+  SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END)     AS step4_5star,
+  ROUND(1.0 * SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END) /
+        COUNT(*), 3) AS overall_conv
+FROM requests req
+LEFT JOIN rides r ON req.request_id = r.request_id;
+```
+
+--
+
+The pattern: `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` counts qualifying rows at each step. Divide to get conversion rates.
+
+---
+
+# Pattern 4: Cohort Retention
+
+```{sql cohort, eval=TRUE}
+WITH cohort AS (
+  SELECT rider_id, strftime('%Y-%m', signup_date) AS cohort_month
+  FROM   riders
+),
+activity AS (
+  SELECT DISTINCT rider_id, strftime('%Y-%m', requested_at) AS activity_month
+  FROM   requests
+)
+SELECT c.cohort_month,
+       a.activity_month,
+       COUNT(DISTINCT c.rider_id) AS active_riders
+FROM   cohort c
+JOIN   activity a ON c.rider_id = a.rider_id
+GROUP BY c.cohort_month, a.activity_month
+ORDER BY c.cohort_month, a.activity_month
+LIMIT 6;
+```
+
+---
+
+# Common Traps
+
+**1. Selecting non-aggregated columns without grouping.** Strict SQL errors out; SQLite picks an arbitrary value (which is worse).
+
+--
+
+**2. `COUNT` vs `COUNT(DISTINCT)`.** `COUNT(*)` counts rows. `COUNT(DISTINCT col)` counts unique values. Always be deliberate.
+
+--
+
+**3. Counting "users" after a JOIN.** Joins multiply rows. `COUNT(rider_id)` after a join counts *rides*, not riders. Use `COUNT(DISTINCT rider_id)`.
+
+--
+
+**4. Filtering aggregates in `WHERE`.** Doesn't work. Use `HAVING`.
+
+---
+class: inverse
+
+# The Key Takeaways
+
+<br>
+
+### 1. The six patterns above cover almost every analytical query you'll write.
+
+--
+
+<br>
+
+### 2. WHERE filters rows; HAVING filters groups. Aggregates can only live in HAVING.
+
+--
+
+<br>
+
+### 3. CASE WHEN inside an aggregate is the SQL idiom for `mean(condition)`. Memorize it.
+
+---
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels <i>(just finished)</i></td><td>✓ done</td></tr>
+<tr><td><b>4</b></td><td><b>Subqueries and CTEs</b></td><td>next</td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+</table>

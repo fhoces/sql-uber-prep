@@ -1,0 +1,274 @@
+---
+title: "Module 5: Window Functions"
+subtitle: "The single most powerful SQL feature for analytical work"
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts]
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+
+```{css, echo=FALSE}
+.remark-code, .remark-inline-code { font-size: 80%; }
+.remark-slide-content { padding: 1em 2em; }
+.small { font-size: 80%; }
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", message = FALSE, warning = FALSE)
+library(DBI); library(RSQLite); library(tidyverse)
+con <- dbConnect(SQLite(), "../data/uber.sqlite")
+knitr::opts_chunk$set(connection = "con")
+```
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
+<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td></tr>
+<tr><td><b>5</b></td><td><b>Window Functions</b> <i>(you are here)</i></td><td>← current</td></tr>
+</table>
+
+---
+
+# The Mental Model
+
+A window function:
+
+- Computes an aggregate (or rank, or lag) **across a set of rows related to the current row** (the "window")
+- Returns **one value per input row** (unlike GROUP BY)
+- Lives in the SELECT clause
+
+--
+
+```sql
+SELECT
+  driver_id, fare_usd,
+  AVG(fare_usd) OVER (PARTITION BY driver_id) AS driver_avg
+FROM rides;
+```
+
+Returns *every* ride along with its driver's average fare. **No GROUP BY, no subquery.**
+
+---
+
+# The OVER Clause
+
+```sql
+function() OVER (
+  PARTITION BY col1, col2     -- groups (like GROUP BY)
+  ORDER BY     col3 DESC      -- order within partition
+  ROWS BETWEEN ... AND ...    -- frame
+)
+```
+
+--
+
+Three parts:
+
+- **PARTITION BY** — splits rows into groups
+- **ORDER BY** — orders within each partition (required for ranking; optional for plain aggregates)
+- **ROWS BETWEEN** — defines the window frame
+
+---
+
+# Four Function Families
+
+**1. Aggregates** — `SUM`, `AVG`, `MIN`, `MAX`, `COUNT`
+
+--
+
+**2. Ranking**
+
+| Function | Behavior on ties |
+|---|---|
+| `ROW_NUMBER()` | Always 1, 2, 3, ... |
+| `RANK()` | Same rank, gaps after (1, 2, 2, 4) |
+| `DENSE_RANK()` | Same rank, no gaps (1, 2, 2, 3) |
+| `NTILE(n)` | Splits into n equal buckets |
+
+--
+
+**3. Offset** — `LAG(col, n, default)`, `LEAD(col, n, default)`
+
+--
+
+**4. First / last** — `FIRST_VALUE`, `LAST_VALUE`, `NTH_VALUE`
+
+---
+
+# Pattern: Top-N Per Group
+
+```{sql topn, eval=TRUE}
+WITH ranked AS (
+  SELECT driver_id, ride_id, fare_usd,
+         ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY fare_usd DESC) AS rk
+  FROM rides
+)
+SELECT driver_id, ride_id, fare_usd
+FROM ranked
+WHERE rk = 1
+ORDER BY fare_usd DESC
+LIMIT 5;
+```
+
+--
+
+**Use `ROW_NUMBER`** if you want exactly one row per group (ties broken arbitrarily). **Use `RANK` or `DENSE_RANK`** if you want all tied rows.
+
+---
+
+# Pattern: Time Since Previous Event
+
+```{sql lag, eval=TRUE}
+SELECT
+  ride_id, driver_id, started_at,
+  LAG(started_at, 1) OVER (PARTITION BY driver_id ORDER BY started_at) AS prev,
+  ROUND(
+    (julianday(started_at) -
+     julianday(LAG(started_at, 1) OVER (PARTITION BY driver_id ORDER BY started_at))
+    ) * 24, 2
+  ) AS hours_since_last
+FROM rides
+LIMIT 5;
+```
+
+--
+
+For the first ride per driver, `LAG` returns NULL.
+
+---
+
+# Pattern: Rolling Average
+
+```{sql rolling, eval=TRUE}
+WITH daily AS (
+  SELECT date(started_at) AS day, COUNT(*) AS rides_today
+  FROM rides
+  GROUP BY day
+)
+SELECT day, rides_today,
+       ROUND(AVG(rides_today) OVER (
+         ORDER BY day
+         ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+       ), 1) AS rolling_7d
+FROM daily
+ORDER BY day
+LIMIT 7;
+```
+
+--
+
+`ROWS BETWEEN 6 PRECEDING AND CURRENT ROW` = 7-row window. Pre-aggregate to one row per day so the row count = day count.
+
+---
+
+# Pattern: Bottom Decile per Group
+
+```{sql ntile, eval=TRUE}
+WITH driver_city AS (
+  SELECT r.driver_id, n.city_id,
+         AVG(CASE WHEN req.accepted = 1 THEN 1.0 ELSE 0 END) AS accept_rate
+  FROM requests req
+  LEFT JOIN rides r ON req.request_id = r.request_id
+  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+  WHERE r.driver_id IS NOT NULL
+  GROUP BY r.driver_id, n.city_id
+),
+deciled AS (
+  SELECT *, NTILE(10) OVER (PARTITION BY city_id ORDER BY accept_rate) AS decile
+  FROM driver_city
+)
+SELECT * FROM deciled WHERE decile = 1 LIMIT 5;
+```
+
+--
+
+`NTILE(10)` is a one-liner replacement for the gnarly correlated subquery from Module 3.
+
+---
+
+# Pattern: Gaps and Islands
+
+"Each driver's longest streak of consecutive days with ≥ 1 ride."
+
+```sql
+WITH driver_days AS (
+  SELECT DISTINCT driver_id, date(started_at) AS d FROM rides
+),
+labeled AS (
+  SELECT driver_id, d,
+    julianday(d) - ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY d) AS grp
+  FROM driver_days
+),
+streaks AS (
+  SELECT driver_id, grp, COUNT(*) AS streak_len
+  FROM labeled
+  GROUP BY driver_id, grp
+)
+SELECT driver_id, MAX(streak_len) FROM streaks GROUP BY driver_id;
+```
+
+--
+
+**The trick:** subtracting `ROW_NUMBER()` from the date gives a constant for any consecutive run. Group by that constant → each streak. Mind-bending the first time you see it.
+
+---
+
+# Common Traps
+
+**1. Missing `ORDER BY` for ranking.** `ROW_NUMBER() OVER (PARTITION BY x)` without ORDER BY is non-deterministic.
+
+--
+
+**2. Wrong default frame for `LAST_VALUE`.** Defaults to ending at `CURRENT ROW`, so it returns the current row's value. Always extend to `UNBOUNDED FOLLOWING`.
+
+--
+
+**3. Window functions in `WHERE`.** Doesn't work — windows are computed after WHERE. Wrap in a CTE and filter in the outer query.
+
+--
+
+**4. Rolling window with gaps.** `ROWS BETWEEN 6 PRECEDING` counts *rows*, not days. Pre-aggregate first.
+
+---
+class: inverse
+
+# The Key Takeaways
+
+<br>
+
+### 1. Window functions = aggregate + per-row output. The mental shift is: every row keeps its identity, but you compute things across related rows.
+
+--
+
+<br>
+
+### 2. The four families: aggregate-with-window, ranking, offset (LAG/LEAD), first/last.
+
+--
+
+<br>
+
+### 3. ROW_NUMBER + filter inside a CTE is the canonical "top-N per group" idiom. Memorize it.
+
+---
+
+# Course Map
+
+<table>
+<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
+<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td></tr>
+<tr><td>5</td><td>Window Functions <i>(just finished)</i></td><td>✓ done</td></tr>
+</table>
+
+**You're done with the SQL course.** Time to drill the questions until you can write each one in two minutes flat.
