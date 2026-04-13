@@ -1,4 +1,4 @@
-# SQL for the Uber Policy Economist Interview
+# Intro to SQL
 
 A 5-module SQL refresher built around interview-style questions for a
 ride-sharing analytical role. Every module is concept → code → 3–6
