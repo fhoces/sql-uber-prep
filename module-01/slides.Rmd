@@ -59,6 +59,8 @@ This module is the warm-up: SELECT, WHERE, simple aggregates, sorting, LIMIT.
 
 # The Schema
 
+A **schema** is the map of a database: what tables exist, what columns each has, and how they link. If you're used to R or Stata, think of it as having **multiple data frames stored together** with columns that let you `left_join` between them.
+
 ```
 cities         (city_id, name, country, lead_pm)
 neighborhoods  (nbhd_id, city_id, name, pct_minority, median_income)
@@ -72,9 +74,7 @@ rides          (ride_id, request_id, driver_id, started_at, ended_at,
 
 --
 
-This schema mirrors the kinds of tables you'd see at any rideshare. The
-exercises in this course are designed so the queries you learn here
-generalize to any platform with a similar data model.
+The linking columns (e.g. `driver_id` appears in both `rides` and `drivers`) are what you'd use as the `by =` argument in dplyr. In SQL, you use `JOIN ... ON` instead.
 
 ---
 
