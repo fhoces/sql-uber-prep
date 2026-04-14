@@ -105,7 +105,11 @@ Three parts:
 
 ---
 
-# Pattern: Top-N Per Group
+# Q: For each driver, find their highest-fare ride.
+
+*Hint: `ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY fare_usd DESC)`, then filter for rank = 1.*
+
+--
 
 ```{sql topn, eval=TRUE}
 WITH ranked AS (
@@ -126,7 +130,11 @@ LIMIT 5;
 
 ---
 
-# Pattern: Time Since Previous Event
+# Q: For each ride, how many hours since the driver's previous ride?
+
+*Hint: `LAG(started_at, 1) OVER (PARTITION BY driver_id ORDER BY started_at)`.*
+
+--
 
 ```{sql lag, eval=TRUE}
 SELECT
@@ -147,7 +155,11 @@ For the first ride per driver, `LAG` returns NULL.
 
 ---
 
-# Pattern: Rolling Average
+# Q: Compute a 7-day rolling average of daily ride counts.
+
+*Hint: pre-aggregate to one row per day, then `AVG(...) OVER (ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`.*
+
+--
 
 ```{sql rolling, eval=TRUE}
 WITH daily AS (
@@ -171,7 +183,11 @@ LIMIT 7;
 
 ---
 
-# Pattern: Bottom Decile per Group
+# Q: Find drivers in the bottom 10% of their city by acceptance rate.
+
+*Hint: `NTILE(10) OVER (PARTITION BY city_id ORDER BY accept_rate)`, then filter for decile = 1.*
+
+--
 
 ```{sql ntile, eval=TRUE}
 WITH driver_city AS (
@@ -196,9 +212,11 @@ SELECT * FROM deciled WHERE decile = 1 LIMIT 5;
 
 ---
 
-# Pattern: Gaps and Islands
+# Q: What is each driver's longest streak of consecutive days with at least one ride?
 
-"Each driver's longest streak of consecutive days with ≥ 1 ride."
+*Hint: the "gaps and islands" trick — subtract `ROW_NUMBER()` from the date to get a constant for each consecutive run.*
+
+--
 
 ```sql
 WITH driver_days AS (

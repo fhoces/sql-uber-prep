@@ -52,7 +52,9 @@ If you can write all six from memory, you're past the bar for any data job inter
 
 ---
 
-# Pattern 1: City-Level Dashboard
+# Pattern 1: Build a city-level dashboard with ride count, active drivers, avg fare, and total revenue.
+
+--
 
 ```{sql dash, eval=TRUE}
 SELECT
@@ -71,7 +73,9 @@ ORDER BY total_revenue DESC;
 
 ---
 
-# Pattern 2: Compare to the Global Average
+# Pattern 2: Which cities have an average fare above the global average?
+
+--
 
 ```{sql global, eval=TRUE}
 SELECT c.name AS city,
@@ -92,7 +96,9 @@ The trick: a scalar subquery in `HAVING` for the global benchmark.
 
 ---
 
-# Pattern 3: Conversion Funnel
+# Pattern 3: Build a funnel — how many requests become rides, and how many of those get 5 stars?
+
+--
 
 ```{sql funnel, eval=TRUE}
 SELECT
@@ -112,7 +118,9 @@ The pattern: `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` counts qualifying rows at ea
 
 ---
 
-# Pattern 4: Cohort Retention
+# Pattern 4: For each signup-month cohort, how many riders were active in each subsequent month?
+
+--
 
 ```{sql cohort, eval=TRUE}
 WITH cohort AS (

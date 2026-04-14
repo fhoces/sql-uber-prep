@@ -298,7 +298,11 @@ class: inverse, center, middle
 
 ---
 
-# Q1. Average fare by hour of day
+# Q1. What is the average fare by hour of day?
+
+*Hint: you need `strftime('%H', ...)` to extract the hour, `AVG()`, and `GROUP BY`.*
+
+--
 
 ```{sql q-hour, eval=TRUE}
 SELECT strftime('%H', started_at) AS hour,
@@ -312,7 +316,11 @@ LIMIT 6;
 
 ---
 
-# Q2. Monthly conversion rate
+# Q2. What is the monthly conversion rate (requests → accepted)?
+
+*Hint: you need `SUM(accepted) / COUNT(*)` and watch out for integer division.*
+
+--
 
 ```{sql q-conv, eval=TRUE}
 SELECT strftime('%Y-%m', requested_at) AS month,
@@ -327,7 +335,11 @@ LIMIT 6;
 
 ---
 
-# Q3. Surge frequency
+# Q3. How often does surge pricing kick in, and what's the average multiplier?
+
+*Hint: use the `CASE WHEN ... THEN 1 ELSE 0 END` trick inside `SUM()` and `AVG()`.*
+
+--
 
 ```{sql q-surge, eval=TRUE}
 SELECT

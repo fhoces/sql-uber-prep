@@ -117,9 +117,11 @@ Each CTE = one logical step. Read top-to-bottom like a script.
 
 ---
 
-# Pattern: First / Last / Only
+# Q: For each rider, find the date of their first ride and the city it was in.
 
-"Each rider's first ride and the city it was in":
+*Hint: CTE to find `MIN(started_at)` per rider, then JOIN back to get the city.*
+
+--
 
 
 ```sql
@@ -153,7 +155,9 @@ Table: 5 records
 
 ---
 
-# Pattern: Multi-Step Funnel
+# Q: Build a December funnel (request → ride → 5-star) using a chain of CTEs.
+
+--
 
 ```sql
 WITH dec_requests AS (
@@ -180,7 +184,11 @@ The pattern: each CTE is a step. Easy to test in isolation.
 
 ---
 
-# Pattern: Active in Last N Periods
+# Q: Find riders who were active in each of the last 4 weeks of December.
+
+*Hint: collapse requests to rider × week, then `HAVING COUNT(DISTINCT week) &gt;= 4`.*
+
+--
 
 
 ```sql

@@ -373,7 +373,11 @@ class: inverse, center, middle
 
 ---
 
-# Q1. Unique drivers per rider
+# Q1. For each rider, how many unique drivers have they ridden with?
+
+*Hint: JOIN `rides` to `requests` (to get `rider_id`), then `COUNT(DISTINCT driver_id)`.*
+
+--
 
 
 ```sql
@@ -402,7 +406,11 @@ Table: 5 records
 
 ---
 
-# Q2. Each ride attached to driver tenure
+# Q2. For each ride, how many days had the driver been on the platform?
+
+*Hint: JOIN `rides` to `drivers`, then compute `julianday(started_at) - julianday(signup_date)`.*
+
+--
 
 
 ```sql
@@ -431,7 +439,11 @@ Table: 5 records
 
 ---
 
-# Q3. Rider-driver pairs with 3+ 5-star ratings
+# Q3. Which rider-driver pairs have had 3 or more 5-star rides together?
+
+*Hint: JOIN `rides` to `requests`, filter for `rider_rating = 5`, GROUP BY the pair, HAVING &gt;= 3.*
+
+--
 
 
 ```sql
