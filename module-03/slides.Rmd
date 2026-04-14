@@ -52,6 +52,30 @@ If you can write all six from memory, you're past the bar for any data job inter
 
 ---
 
+# How to Write SQL (for R Users)
+
+In dplyr you write **top-to-bottom in the order things happen**: data → join → group → summarise → sort.
+
+SQL's written order is **scrambled** — you write the output (`SELECT`) first, even though it runs last. This is confusing.
+
+--
+
+**Trick: write SQL from the middle out.**
+
+| Step | What to write | Where it goes |
+|---|---|---|
+| 1. | `FROM rides r` | Middle |
+| 2. | `JOIN requests req ON ...` | Middle |
+| 3. | `GROUP BY c.name` | Below the joins |
+| 4. | Now go to the top: `SELECT c.name, COUNT(*)` | Top |
+| 5. | `ORDER BY ... LIMIT ...` | Bottom |
+
+--
+
+Start with the data source (FROM), add joins, add GROUP BY. **Only then** go back up and write SELECT — by that point you know what columns are available. Feels weird for a week, then it's automatic.
+
+---
+
 # Q: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
 
 **Step 1.** Start from the `rides` table — that's where fares live.
