@@ -42,6 +42,35 @@ class: center, middle, inverse, title-slide
 
 ---
 
+# Before We Start: Setup
+
+**Step 1.** Build the database (once, in your terminal):
+
+```bash
+cd ~/Desktop/sandbox/sql-uber-prep
+Rscript data/setup.R
+```
+
+This creates `data/uber.sqlite` with 6 tables (~39K rides, 800 drivers, 4K riders).
+
+--
+
+**Step 2.** Install **DB Browser for SQLite** — a free GUI app:
+
+Download from [sqlitebrowser.org/dl](https://sqlitebrowser.org/dl/), drag to Applications, then:
+
+```bash
+open -a "DB Browser for SQLite" data/uber.sqlite
+```
+
+--
+
+**Step 3.** Go to the **Execute SQL** tab. Type a query, hit `Cmd+Return` to run it.
+
+**Important:** only highlight and run one `SELECT ... ;` at a time. Don't paste whole files — the `.headers on` lines at the top of exercise files are terminal-only commands and will cause errors in DB Browser.
+
+---
+
 # Why SQL? (You can do all of this in R)
 
 Yes — but there are three reasons you'll use SQL anyway:
