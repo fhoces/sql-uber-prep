@@ -60,20 +60,22 @@ class: center, middle, inverse, title-slide
 # Syntax
 
 ```sql
-SELECT  a.col1, b.col2
-FROM    table_a AS a
-JOIN    table_b AS b
-  ON    a.fk = b.pk
+SELECT  r.ride_id, d.gender
+FROM    rides AS r
+JOIN    drivers AS d
+  ON    r.driver_id = d.driver_id
 WHERE   ...;
 ```
+
+The `ON` clause specifies which column links the two tables — the same column you'd put in `by =` in dplyr's `left_join(rides, drivers, by = "driver_id")`.
 
 --
 
 Three things:
 
-1. **Always use table aliases** (`a`, `b`). Shorter, disambiguates same-named columns.
+1. **Always use table aliases** (`r`, `d`, etc.). Shorter, and disambiguates columns that exist in both tables (like `driver_id`).
 2. **`ON` is the join condition** — anything that evaluates TRUE/FALSE works, including non-equality.
-3. **`USING (col)`** is shorthand for `ON a.col = b.col` when names match.
+3. **`USING (col)`** is shorthand for `ON r.col = d.col` when the column has the same name in both tables.
 
 ---
 
