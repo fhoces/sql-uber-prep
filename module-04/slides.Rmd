@@ -26,6 +26,8 @@ knitr::opts_chunk$set(connection = "con")
 
 # Course Map
 
+<a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;">Schema ref</a>
+
 <table>
 <tr><th>#</th><th>Module</th><th>Status</th></tr>
 <tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
@@ -234,6 +236,8 @@ class: inverse
 ---
 
 # Course Map
+
+<a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;">Schema ref</a>
 
 <table>
 <tr><th>#</th><th>Module</th><th>Status</th></tr>

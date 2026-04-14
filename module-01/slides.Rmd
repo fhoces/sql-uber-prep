@@ -115,6 +115,7 @@ A 5-module SQL refresher targeted at **applied economist / data science** interv
 - **Goal:** be able to write the canonical analytical queries from a cold start
 
 ---
+name: schema
 
 # The Schema
 
@@ -293,6 +294,7 @@ class: inverse, center, middle
 
 # Interview Questions
 ### How fast can you write each one?
+### [Schema reference](#schema)
 
 ---
 

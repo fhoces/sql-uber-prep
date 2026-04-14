@@ -319,9 +319,23 @@ Table: 5 records
 |San Francisco |    7668|    12.02|
 ]
 
-The single-letter aliases (`r`, `req`, `n`, `c`) are just shorthand — `c.name` means "the `name` column from the `cities` table." Like `cities$name` in R.
+---
+count: false
 
-&lt;details&gt;&lt;summary&gt;Click here to see how this would be done in R&lt;/summary&gt;
+# Pattern: Multi-table chain — reading the aliases
+
+The single-letter aliases are shorthand for table names:
+
+| Alias | Table | What it contributes |
+|---|---|---|
+| `r` | `rides` | fare, distance, timing |
+| `req` | `requests` | links rides to pickup neighborhood |
+| `n` | `neighborhoods` | links neighborhood to city |
+| `c` | `cities` | the city name we want |
+
+So `c.name` = "the `name` column from the `cities` table" — like `cities$name` in R.
+
+&lt;details&gt;&lt;summary&gt;Click here to see the same query in R / dplyr&lt;/summary&gt;
 &lt;pre&gt;
 rides |&gt;
   left_join(requests, by = "request_id") |&gt;
@@ -355,6 +369,7 @@ rides |&gt;
 class: inverse, center, middle
 
 # Interview Questions
+### &lt;a href="../module-01/slides.html#schema"&gt;Schema reference&lt;/a&gt;
 
 ---
 
