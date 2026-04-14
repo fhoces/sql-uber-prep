@@ -241,7 +241,7 @@ WITH RECURSIVE numbers(n) AS (
 SELECT * FROM numbers;
 ```
 
-You probably won't need this for an Uber policy economist interview,
+You probably won't need this for a typical applied-economist interview,
 but it's good to know it exists.
 
 ## Common traps
