@@ -76,21 +76,28 @@ Three things:
 
 ---
 
-# Inner JOIN: The Source Tables
+# Inner JOIN: Table 1
 
-**rides** (we want ride info)
+**rides** — we want the ride info. Notice the `driver_id` column:
 
 ```{sql inner-src1, eval=TRUE}
-SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 3;
+SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 5;
 ```
 
-**drivers** (we want gender)
+We want to attach each driver's `gender` to their rides. But `gender` lives in a different table...
+
+---
+count: false
+
+# Inner JOIN: Table 2
+
+**drivers** — has the `gender` column, linked by the same `driver_id`:
 
 ```{sql inner-src2, eval=TRUE}
-SELECT driver_id, gender FROM drivers LIMIT 3;
+SELECT driver_id, gender FROM drivers LIMIT 5;
 ```
 
-The linking column is `driver_id` — it appears in both tables.
+The `driver_id` column appears in **both** tables — that's the link. The JOIN will match rows where they agree.
 
 ---
 count: false
@@ -112,21 +119,28 @@ Only rows where `driver_id` exists in **both** tables are kept.
 
 ---
 
-# LEFT JOIN: The Source Tables
+# LEFT JOIN: Table 1
 
-**requests** (all, incl. rejected)
+**requests** — all ride requests, including ones that were rejected:
 
 ```{sql left-src1, eval=TRUE}
-SELECT request_id, accepted FROM requests LIMIT 3;
+SELECT request_id, rider_id, accepted FROM requests LIMIT 5;
 ```
 
-**rides** (only accepted requests have a matching ride)
+Some requests have `accepted = 0` — no ride was completed. What happens to those when we join?
+
+---
+count: false
+
+# LEFT JOIN: Table 2
+
+**rides** — only exists for requests that were actually accepted:
 
 ```{sql left-src2, eval=TRUE}
-SELECT request_id, ride_id, fare_usd FROM rides LIMIT 3;
+SELECT request_id, ride_id, fare_usd FROM rides LIMIT 5;
 ```
 
-LEFT JOIN keeps **all** rows from the left table. Unmatched rows get NULLs for the right side.
+Rejected requests have **no matching row** in `rides`. A LEFT JOIN keeps them anyway (with NULLs for the missing ride columns).
 
 ---
 count: false
