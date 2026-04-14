@@ -79,11 +79,56 @@ Three things:
 
 ---
 
-# Pattern: Inner JOIN
+# Inner JOIN: The Source Tables
+
+**Table 1: rides** (we want the ride info)
 
 
 ```sql
-SELECT r.ride_id, d.gender, r.fare_usd
+SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 4;
+```
+
+
+
+
+Table: 4 records
+
+|ride_id | driver_id| fare_usd|
+|:-------|---------:|--------:|
+|1       |       429|    16.52|
+|2       |        83|    19.78|
+|3       |       535|    26.97|
+|4       |       101|    13.68|
+
+**Table 2: drivers** (we want the driver's gender)
+
+
+```sql
+SELECT driver_id, gender FROM drivers LIMIT 4;
+```
+
+
+
+
+Table: 4 records
+
+|driver_id |gender |
+|:---------|:------|
+|1         |M      |
+|2         |M      |
+|3         |M      |
+|4         |M      |
+
+The linking column is `driver_id` — it appears in both tables.
+
+---
+count: false
+
+# Inner JOIN: The Result
+
+
+```sql
+SELECT r.ride_id, r.driver_id, d.gender, r.fare_usd
 FROM   rides r
 JOIN   drivers d ON r.driver_id = d.driver_id
 LIMIT 5;
@@ -94,28 +139,72 @@ LIMIT 5;
 
 Table: 5 records
 
-|ride_id |gender | fare_usd|
-|:-------|:------|--------:|
-|1       |F      |    16.52|
-|2       |M      |    19.78|
-|3       |M      |    26.97|
-|4       |M      |    13.68|
-|5       |M      |    16.65|
+|ride_id | driver_id|gender | fare_usd|
+|:-------|---------:|:------|--------:|
+|1       |       429|F      |    16.52|
+|2       |        83|M      |    19.78|
+|3       |       535|M      |    26.97|
+|4       |       101|M      |    13.68|
+|5       |        85|M      |    16.65|
 
 --
 
-One row per ride, with the driver's gender attached. Equivalent to dplyr's `inner_join(rides, drivers, by = "driver_id")`.
+Each ride now has the driver's `gender` attached. The `ON r.driver_id = d.driver_id` told SQL which rows to match — same as `inner_join(rides, drivers, by = "driver_id")` in dplyr.
+
+Only rows where `driver_id` exists in **both** tables are kept.
 
 ---
 
-# Pattern: LEFT JOIN
+# LEFT JOIN: The Source Tables
+
+**Table 1: requests** (all requests, including rejected ones)
+
+
+```sql
+SELECT request_id, rider_id, accepted FROM requests LIMIT 4;
+```
+
+
+
+
+Table: 4 records
+
+|request_id | rider_id| accepted|
+|:----------|--------:|--------:|
+|1          |     3632|        1|
+|2          |      912|        1|
+|3          |     1119|        1|
+|4          |     2529|        1|
+
+**Table 2: rides** (only accepted requests have a matching ride)
+
+
+```sql
+SELECT request_id, ride_id, fare_usd FROM rides LIMIT 4;
+```
+
+
+
+
+Table: 4 records
+
+|request_id | ride_id| fare_usd|
+|:----------|-------:|--------:|
+|1          |       1|    16.52|
+|2          |       2|    19.78|
+|3          |       3|    26.97|
+|4          |       4|    13.68|
+
+---
+count: false
+
+# LEFT JOIN: The Result
 
 
 ```sql
 SELECT req.request_id, req.accepted, r.fare_usd
 FROM   requests req
 LEFT JOIN rides r ON req.request_id = r.request_id
-WHERE  req.accepted = 0
 LIMIT 5;
 ```
 
@@ -124,17 +213,19 @@ LIMIT 5;
 
 Table: 5 records
 
-| request_id| accepted| fare_usd|
-|----------:|--------:|--------:|
-|          6|        0|       NA|
-|          7|        0|       NA|
-|          8|        0|       NA|
-|         15|        0|       NA|
-|         21|        0|       NA|
+|request_id | accepted| fare_usd|
+|:----------|--------:|--------:|
+|1          |        1|    16.52|
+|2          |        1|    19.78|
+|3          |        1|    26.97|
+|4          |        1|    13.68|
+|5          |        1|    16.65|
 
 --
 
-All requests, with the ride info if it exists. **Unaccepted requests have NULL for `fare_usd`** because there's no matching row in `rides`.
+**All** requests are kept (LEFT side). If a request was not accepted, there's no matching ride → `fare_usd` is **NULL**.
+
+This is the key difference from INNER JOIN: unmatched left-side rows stay in the result (with NULLs for the right side) instead of being dropped.
 
 ---
 

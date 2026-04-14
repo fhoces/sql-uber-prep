@@ -74,10 +74,29 @@ Three things:
 
 ---
 
-# Pattern: Inner JOIN
+# Inner JOIN: The Source Tables
+
+**Table 1: rides** (we want the ride info)
+
+```{sql inner-src1, eval=TRUE}
+SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 4;
+```
+
+**Table 2: drivers** (we want the driver's gender)
+
+```{sql inner-src2, eval=TRUE}
+SELECT driver_id, gender FROM drivers LIMIT 4;
+```
+
+The linking column is `driver_id` — it appears in both tables.
+
+---
+count: false
+
+# Inner JOIN: The Result
 
 ```{sql inner, eval=TRUE}
-SELECT r.ride_id, d.gender, r.fare_usd
+SELECT r.ride_id, r.driver_id, d.gender, r.fare_usd
 FROM   rides r
 JOIN   drivers d ON r.driver_id = d.driver_id
 LIMIT 5;
@@ -85,23 +104,43 @@ LIMIT 5;
 
 --
 
-One row per ride, with the driver's gender attached. Equivalent to dplyr's `inner_join(rides, drivers, by = "driver_id")`.
+Each ride now has the driver's `gender` attached. The `ON r.driver_id = d.driver_id` told SQL which rows to match — same as `inner_join(rides, drivers, by = "driver_id")` in dplyr.
+
+Only rows where `driver_id` exists in **both** tables are kept.
 
 ---
 
-# Pattern: LEFT JOIN
+# LEFT JOIN: The Source Tables
+
+**Table 1: requests** (all requests, including rejected ones)
+
+```{sql left-src1, eval=TRUE}
+SELECT request_id, rider_id, accepted FROM requests LIMIT 4;
+```
+
+**Table 2: rides** (only accepted requests have a matching ride)
+
+```{sql left-src2, eval=TRUE}
+SELECT request_id, ride_id, fare_usd FROM rides LIMIT 4;
+```
+
+---
+count: false
+
+# LEFT JOIN: The Result
 
 ```{sql left-join, eval=TRUE}
 SELECT req.request_id, req.accepted, r.fare_usd
 FROM   requests req
 LEFT JOIN rides r ON req.request_id = r.request_id
-WHERE  req.accepted = 0
 LIMIT 5;
 ```
 
 --
 
-All requests, with the ride info if it exists. **Unaccepted requests have NULL for `fare_usd`** because there's no matching row in `rides`.
+**All** requests are kept (LEFT side). If a request was not accepted, there's no matching ride → `fare_usd` is **NULL**.
+
+This is the key difference from INNER JOIN: unmatched left-side rows stay in the result (with NULLs for the right side) instead of being dropped.
 
 ---
 
