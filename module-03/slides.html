@@ -59,7 +59,41 @@ If you can write all six from memory, you're past the bar for any data job inter
 
 # Q: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
 
+**Step 1.** Start from the `rides` table — that's where fares live.
+
+```sql
+FROM rides r
+```
+
 --
+
+**Step 2.** We need city names, but `rides` doesn't have them. Chain through 3 joins:
+
+```sql
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id     -- get pickup neighborhood
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id -- get city_id
+JOIN cities c ON n.city_id = c.city_id                  -- get city name
+```
+
+--
+
+**Step 3.** Now we have all the columns. Group by city, compute the aggregates:
+
+```sql
+SELECT c.name AS city,
+       COUNT(DISTINCT r.driver_id) AS drivers,  -- unique drivers
+       COUNT(*) AS n_rides,                      -- total rides
+       ROUND(AVG(r.fare_usd), 2) AS avg_fare,   -- average fare
+       ROUND(SUM(r.fare_usd), 0) AS revenue      -- total revenue
+...
+GROUP BY c.name ORDER BY revenue DESC;
+```
+
+---
+count: false
+
+# Q: City-level dashboard — the full query + result
 
 .small[
 
