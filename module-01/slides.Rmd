@@ -60,7 +60,7 @@ Yes — but there are three reasons you'll use SQL anyway:
 
 # Why SQL? Speed comparison
 
-```{r speed-bench, echo=FALSE, fig.height=3.8}
+```{r speed-bench, echo=FALSE, fig.height=4.5, fig.width=9, dpi=200}
 library(DBI); library(RSQLite)
 sizes <- c(1e4, 5e4, 1e5, 5e5, 1e6)
 results <- lapply(sizes, function(n) {
@@ -68,7 +68,7 @@ results <- lapply(sizes, function(n) {
                    fare = rnorm(n, 20, 5))
   # R timing
   r_time <- system.time(df |> dplyr::group_by(city) |> dplyr::summarise(avg = mean(fare)))["elapsed"]
-  # SQLite timing
+  # SQLite timing (exclude the write — in practice the data is already there)
   tmp <- tempfile(fileext = ".sqlite")
   con <- dbConnect(SQLite(), tmp)
   dbWriteTable(con, "rides", df)
@@ -82,8 +82,9 @@ bench <- do.call(rbind, results) |>
 ggplot(bench, aes(n, seconds, color = engine)) +
   geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
   scale_x_log10(labels = scales::comma) +
+  scale_color_manual(values = c("R" = "steelblue", "SQLite" = "firebrick")) +
   labs(title = "GROUP BY + AVG: R (dplyr) vs SQLite",
-       subtitle = "Same operation, increasing dataset size",
+       subtitle = "Same operation, increasing dataset size. Note: SQLite timing excludes data loading.",
        x = "Number of rows (log scale)", y = "Seconds", color = NULL)
 ```
 
