@@ -314,6 +314,10 @@ ORDER BY n_5star DESC
 LIMIT 5;
 ```
 
+.small[
+**Why `HAVING COUNT(*) >= 3` instead of `HAVING n_5star >= 3`?** Because `n_5star` is a column alias defined in SELECT, and HAVING runs *before* SELECT. You have to repeat the expression. (SQLite/MySQL are lenient about this; PostgreSQL is not — use the safe version.)
+]
+
 ---
 class: inverse
 

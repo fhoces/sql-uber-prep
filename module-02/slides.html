@@ -463,6 +463,10 @@ Table: 0 records
 | rider_id| driver_id|n_5star |
 |--------:|---------:|:-------|
 
+.small[
+**Why `HAVING COUNT(*) &gt;= 3` instead of `HAVING n_5star &gt;= 3`?** Because `n_5star` is a column alias defined in SELECT, and HAVING runs *before* SELECT. You have to repeat the expression. (SQLite/MySQL are lenient about this; PostgreSQL is not — use the safe version.)
+]
+
 ---
 class: inverse
 
