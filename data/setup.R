@@ -58,8 +58,8 @@ dbWriteTable(con, "neighborhoods", neighborhoods, overwrite = TRUE)
 n_drivers <- 800
 drivers <- tibble(
   driver_id    = 1:n_drivers,
-  signup_date  = sample(seq(as.Date("2022-01-01"), as.Date("2025-12-01"), by = "day"),
-                        n_drivers, replace = TRUE),
+  signup_date  = as.character(sample(seq(as.Date("2022-01-01"), as.Date("2025-12-01"), by = "day"),
+                        n_drivers, replace = TRUE)),
   gender       = sample(c("M", "F"), n_drivers, replace = TRUE, prob = c(0.78, 0.22)),
   home_nbhd_id = sample(neighborhoods$nbhd_id, n_drivers, replace = TRUE)
 )
@@ -73,8 +73,8 @@ dbWriteTable(con, "drivers", drivers, overwrite = TRUE)
 n_riders <- 4000
 riders <- tibble(
   rider_id     = 1:n_riders,
-  signup_date  = sample(seq(as.Date("2022-01-01"), as.Date("2025-12-01"), by = "day"),
-                        n_riders, replace = TRUE),
+  signup_date  = as.character(sample(seq(as.Date("2022-01-01"), as.Date("2025-12-01"), by = "day"),
+                        n_riders, replace = TRUE)),
   home_nbhd_id = sample(neighborhoods$nbhd_id, n_riders, replace = TRUE)
 )
 
