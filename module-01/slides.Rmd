@@ -58,37 +58,26 @@ Yes — but there are three reasons you'll use SQL anyway:
 
 ---
 
-# Why SQL? Speed comparison
+# Why SQL? It's not about speed — it's about scale
 
-```{r speed-bench, echo=FALSE, fig.height=4.5, fig.width=9, dpi=200}
-library(DBI); library(RSQLite)
-sizes <- c(1e4, 5e4, 1e5, 5e5, 1e6)
-results <- lapply(sizes, function(n) {
-  df <- data.frame(city = sample(LETTERS[1:5], n, replace = TRUE),
-                   fare = rnorm(n, 20, 5))
-  # R timing
-  r_time <- system.time(df |> dplyr::group_by(city) |> dplyr::summarise(avg = mean(fare)))["elapsed"]
-  # SQLite timing (exclude the write — in practice the data is already there)
-  tmp <- tempfile(fileext = ".sqlite")
-  con <- dbConnect(SQLite(), tmp)
-  dbWriteTable(con, "rides", df)
-  sql_time <- system.time(dbGetQuery(con, "SELECT city, AVG(fare) FROM rides GROUP BY city"))["elapsed"]
-  dbDisconnect(con); unlink(tmp)
-  data.frame(n = n, R = r_time, SQLite = sql_time)
-})
-bench <- do.call(rbind, results) |>
-  tidyr::pivot_longer(c(R, SQLite), names_to = "engine", values_to = "seconds")
+For data that fits in your laptop's RAM, R/dplyr is actually **faster** than SQLite. That's fine.
 
-ggplot(bench, aes(n, seconds, color = engine)) +
-  geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
-  scale_x_log10(labels = scales::comma) +
-  scale_color_manual(values = c("R" = "steelblue", "SQLite" = "firebrick")) +
-  labs(title = "GROUP BY + AVG: R (dplyr) vs SQLite",
-       subtitle = "Same operation, increasing dataset size. Note: SQLite timing excludes data loading.",
-       x = "Number of rows (log scale)", y = "Seconds", color = NULL)
-```
+The point is what happens when it **doesn't** fit:
 
-.small[At small sizes R and SQL are comparable. As data grows, the database engine scales better — and production databases (Postgres, Spark) scale to billions of rows where R simply can't load the data.]
+| Dataset size | R (dplyr) | SQL database |
+|---|---|---|
+| 100K rows (~10 MB) | Fast | Fast |
+| 10M rows (~1 GB) | Slow but works | Fast |
+| 100M rows (~10 GB) | **Crashes** (out of RAM) | Fast |
+| 1B+ rows (~100 GB) | Impossible | Still fast (Postgres, Spark) |
+
+--
+
+At a ride-sharing company, the `rides` table has **billions** of rows. You can't `read_csv` that. You write a SQL query, the database runs it on the server, and only the **result** (a few rows) comes back to your laptop.
+
+--
+
+That's why every data job requires SQL — not because it's faster for small data, but because it's the **only way to touch big data**.
 
 ---
 

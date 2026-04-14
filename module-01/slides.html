@@ -60,11 +60,26 @@ Yes — but there are three reasons you'll use SQL anyway:
 
 ---
 
-# Why SQL? Speed comparison
+# Why SQL? It's not about speed — it's about scale
 
-&lt;img src="slides_files/figure-html/speed-bench-1.png" style="display: block; margin: auto;" /&gt;
+For data that fits in your laptop's RAM, R/dplyr is actually **faster** than SQLite. That's fine.
 
-.small[At small sizes R and SQL are comparable. As data grows, the database engine scales better — and production databases (Postgres, Spark) scale to billions of rows where R simply can't load the data.]
+The point is what happens when it **doesn't** fit:
+
+| Dataset size | R (dplyr) | SQL database |
+|---|---|---|
+| 100K rows (~10 MB) | Fast | Fast |
+| 10M rows (~1 GB) | Slow but works | Fast |
+| 100M rows (~10 GB) | **Crashes** (out of RAM) | Fast |
+| 1B+ rows (~100 GB) | Impossible | Still fast (Postgres, Spark) |
+
+--
+
+At a ride-sharing company, the `rides` table has **billions** of rows. You can't `read_csv` that. You write a SQL query, the database runs it on the server, and only the **result** (a few rows) comes back to your laptop.
+
+--
+
+That's why every data job requires SQL — not because it's faster for small data, but because it's the **only way to touch big data**.
 
 ---
 
