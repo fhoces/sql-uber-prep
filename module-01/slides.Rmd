@@ -46,14 +46,22 @@ A 5-module SQL refresher targeted at **applied economist / data science** interv
 
 --
 
+**SQL** is the shared language for querying databases. There are several **engines** that run it:
+
+| Engine | What it is | When you'd use it |
+|---|---|---|
+| **SQLite** | A single file on your laptop, zero setup | Tutorials, small projects, mobile apps |
+| **PostgreSQL** | A full server, most feature-rich | Production analytics, data warehouses |
+| **MySQL** | A full server, widely used in web apps | Web backends, some analytics |
+
+~95% of the queries are identical across all three. We use **SQLite** because it's a single file with no server to manage. The patterns transfer directly — if your interviewer uses a different dialect, just ask about syntax differences (mostly date functions).
+
+--
+
 - **Database:** SQLite (`data/uber.sqlite`), built by `Rscript data/setup.R`
 - **Schema:** rides, requests, drivers, riders, neighborhoods, cities
 - **Format:** every module is concept → code → 3-5 interview-style questions
 - **Goal:** be able to write the canonical analytical queries from a cold start
-
---
-
-This module is the warm-up: SELECT, WHERE, simple aggregates, sorting, LIMIT.
 
 ---
 
