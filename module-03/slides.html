@@ -57,24 +57,21 @@ If you can write all six from memory, you're past the bar for any data job inter
 
 ---
 
-# Pattern 1: Build a city-level dashboard with ride count, active drivers, avg fare, and total revenue.
+# Q: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
 
 --
 
+.small[
 
 ```sql
-SELECT
-  c.name                            AS city,
-  COUNT(DISTINCT r.driver_id)       AS active_drivers,
-  COUNT(*)                          AS n_rides,
-  ROUND(AVG(r.fare_usd), 2)         AS avg_fare,
-  ROUND(SUM(r.fare_usd), 0)         AS total_revenue
+SELECT c.name AS city, COUNT(DISTINCT r.driver_id) AS drivers,
+       COUNT(*) AS n_rides, ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+       ROUND(SUM(r.fare_usd), 0) AS revenue
 FROM rides r
 JOIN requests req ON r.request_id = req.request_id
 JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
 JOIN cities c ON n.city_id = c.city_id
-GROUP BY c.name
-ORDER BY total_revenue DESC;
+GROUP BY c.name ORDER BY revenue DESC;
 ```
 
 
@@ -82,13 +79,14 @@ ORDER BY total_revenue DESC;
 
 Table: 5 records
 
-|city          | active_drivers| n_rides| avg_fare| total_revenue|
-|:-------------|--------------:|-------:|--------:|-------------:|
-|Chicago       |            800|    7946|    12.03|         95614|
-|Boston        |            800|    7906|    12.04|         95211|
-|Austin        |            800|    7780|    12.03|         93611|
-|San Francisco |            800|    7668|    12.02|         92140|
-|Seattle       |            800|    7700|    11.94|         91929|
+|city          | drivers| n_rides| avg_fare| revenue|
+|:-------------|-------:|-------:|--------:|-------:|
+|Chicago       |     800|    7946|    12.03|   95614|
+|Boston        |     800|    7906|    12.04|   95211|
+|Austin        |     800|    7780|    12.03|   93611|
+|San Francisco |     800|    7668|    12.02|   92140|
+|Seattle       |     800|    7700|    11.94|   91929|
+]
 
 ---
 
