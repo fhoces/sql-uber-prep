@@ -253,11 +253,43 @@ Only cities with `avg_fare &gt; global_avg` survive the `HAVING` filter.
 
 ---
 
-# Pattern 3: Build a funnel — how many requests become rides, and how many of those get 5 stars?
+# Q: Build a funnel — how many requests become rides, and how many get 5 stars?
 
 &lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
+
+**Step 1.** Start with `requests` and LEFT JOIN `rides` — LEFT because not every request becomes a ride:
+
+```sql
+FROM requests req
+LEFT JOIN rides r ON req.request_id = r.request_id
+```
+
 --
 
+**Step 2.** Count everything (= total requests):
+
+```sql
+COUNT(*) AS step1_requests
+```
+
+--
+
+**Step 3.** Count only the rows where a ride actually happened. The trick: `CASE WHEN condition THEN 1 ELSE 0 END` inside `SUM()` — this counts rows that meet the condition (like `sum(x == TRUE)` in R):
+
+```sql
+SUM(CASE WHEN req.accepted = 1 THEN 1 ELSE 0 END) AS step2_accepted
+SUM(CASE WHEN r.ride_id IS NOT NULL THEN 1 ELSE 0 END) AS step3_completed
+SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END) AS step4_5star
+```
+
+---
+count: false
+
+# Q: Funnel — the full query + result
+
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
+
+.small[
 
 ```sql
 SELECT
@@ -279,10 +311,9 @@ Table: 1 records
 | step1_requests| step2_accepted| step3_completed| step4_5star| overall_conv|
 |--------------:|--------------:|---------------:|-----------:|------------:|
 |          50000|          39000|           39000|       23536|        0.471|
+]
 
---
-
-The pattern: `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` counts qualifying rows at each step. Divide to get conversion rates.
+Read each column as: "of all the rows, how many passed this filter?" The numbers should decrease at each step — that's the funnel.
 
 ---
 
