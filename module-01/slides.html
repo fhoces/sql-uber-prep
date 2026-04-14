@@ -100,7 +100,9 @@ LIMIT 10;
 
 --
 
-This matters: `WHERE` happens **before** the SELECT clause, so you can't reference column aliases in `WHERE`. `ORDER BY` happens **after** SELECT, so you can.
+A **column alias** is the name you give a computed result with `AS` — e.g., `fare_usd * 1.5 AS surge_fare`. It's like naming a new column in `mutate(surge_fare = fare_usd * 1.5)`.
+
+This execution order matters: `WHERE` happens **before** SELECT, so you can't use an alias in `WHERE` (it doesn't exist yet). `ORDER BY` happens **after** SELECT, so you can.
 
 ---
 
