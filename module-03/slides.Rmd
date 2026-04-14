@@ -290,29 +290,68 @@ Read each column as: "of all the rows, how many passed this filter?" The numbers
 
 ---
 
-# Pattern 4: For each signup-month cohort, how many riders were active in each subsequent month?
+# Q: For each signup-month cohort, how many riders were active in each subsequent month?
 
 <a class="write-ref" href="#write-order">WO</a>
+
+**Step 1.** Build a CTE for each rider's cohort (their signup month):
+
+```sql
+WITH cohort AS (
+  SELECT rider_id, strftime('%Y-%m', signup_date) AS cohort_month
+  FROM riders
+)
+```
+
 --
 
+**Step 2.** Build a CTE for each rider's activity months:
+
+```sql
+activity AS (
+  SELECT DISTINCT rider_id, strftime('%Y-%m', requested_at) AS activity_month
+  FROM requests
+)
+```
+
+--
+
+**Step 3.** Join them and count distinct riders per (cohort, activity month):
+
+```sql
+SELECT c.cohort_month, a.activity_month,
+       COUNT(DISTINCT c.rider_id) AS active_riders
+FROM cohort c JOIN activity a ON c.rider_id = a.rider_id
+GROUP BY c.cohort_month, a.activity_month
+```
+
+---
+count: false
+
+# Q: Cohort retention — full query + result
+
+<a class="write-ref" href="#write-order">WO</a>
+
+.small[
 ```{sql cohort, eval=TRUE}
 WITH cohort AS (
   SELECT rider_id, strftime('%Y-%m', signup_date) AS cohort_month
-  FROM   riders
+  FROM riders
 ),
 activity AS (
   SELECT DISTINCT rider_id, strftime('%Y-%m', requested_at) AS activity_month
-  FROM   requests
+  FROM requests
 )
-SELECT c.cohort_month,
-       a.activity_month,
+SELECT c.cohort_month, a.activity_month,
        COUNT(DISTINCT c.rider_id) AS active_riders
-FROM   cohort c
-JOIN   activity a ON c.rider_id = a.rider_id
+FROM cohort c JOIN activity a ON c.rider_id = a.rider_id
 GROUP BY c.cohort_month, a.activity_month
 ORDER BY c.cohort_month, a.activity_month
 LIMIT 6;
 ```
+]
+
+Each row = one (cohort, month) pair. To see retention *rates*, divide `active_riders` by the cohort's total size.
 
 ---
 
