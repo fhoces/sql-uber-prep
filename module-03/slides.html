@@ -163,6 +163,8 @@ HAVING AVG(r.fare_usd) &gt; (SELECT AVG(fare_usd) FROM rides)
 
 The `(SELECT AVG(fare_usd) FROM rides)` is a **scalar subquery** — a mini-query that returns one number, used here like a constant.
 
+Note it says `fare_usd`, not `r.fare_usd`. The subquery is **self-contained** — it has its own `FROM rides` and doesn't know about the outer query's `r` alias. It scans the whole table independently and returns one number.
+
 ---
 count: false
 
