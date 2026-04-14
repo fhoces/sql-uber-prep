@@ -24,6 +24,21 @@ class: center, middle, inverse, title-slide
 &lt;style type="text/css"&gt;
 .remark-code, .remark-inline-code { font-size: 80%; }
 .remark-slide-content { padding: 1em 2em; }
+.write-ref {
+  position: absolute;
+  bottom: 12px;
+  right: 90px;
+  background: #f0f8ff;
+  border: 1px solid #aac;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  text-decoration: none;
+  color: #336;
+  font-weight: bold;
+  z-index: 100;
+}
+.write-ref:hover { background: #ddeeff; text-decoration: none; }
 .small { font-size: 80%; }
 &lt;/style&gt;
 
@@ -56,6 +71,7 @@ class: center, middle, inverse, title-slide
 If you can write all six from memory, you're past the bar for any data job interview.
 
 ---
+name: write-order
 
 # How to Write SQL (for R Users)
 
@@ -83,6 +99,7 @@ Start with the data source (FROM), add joins, add GROUP BY. **Only then** go bac
 
 # Q: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 **Step 1.** Start from the `rides` table — that's where fares live.
 
 ```sql
@@ -119,6 +136,7 @@ count: false
 
 # Q: City-level dashboard — the full query + result
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 .small[
 
 ```sql
@@ -150,6 +168,7 @@ Table: 5 records
 
 # Q: Which cities have an average fare above the global average?
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 Let's build this step by step.
 
 --
@@ -179,6 +198,7 @@ count: false
 
 # Q: Which cities have an average fare above the global average?
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 **Step 3.** Keep only cities whose avg fare beats the global avg. Paste Step 1's query inside `HAVING`:
 
 ```sql
@@ -194,6 +214,7 @@ count: false
 
 # Q: Compare to global average — full query + result
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 .pull-left[
 .small[
 ```sql
@@ -234,6 +255,7 @@ Only cities with `avg_fare &gt; global_avg` survive the `HAVING` filter.
 
 # Pattern 3: Build a funnel — how many requests become rides, and how many of those get 5 stars?
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 --
 
 
@@ -266,6 +288,7 @@ The pattern: `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` counts qualifying rows at ea
 
 # Pattern 4: For each signup-month cohort, how many riders were active in each subsequent month?
 
+&lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 --
 
 

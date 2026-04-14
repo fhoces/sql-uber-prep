@@ -24,6 +24,21 @@ class: center, middle, inverse, title-slide
 &lt;style type="text/css"&gt;
 .remark-code, .remark-inline-code { font-size: 80%; }
 .remark-slide-content { padding: 1em 2em; }
+.write-ref {
+  position: absolute;
+  bottom: 12px;
+  right: 90px;
+  background: #f0f8ff;
+  border: 1px solid #aac;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  text-decoration: none;
+  color: #336;
+  font-weight: bold;
+  z-index: 100;
+}
+.write-ref:hover { background: #ddeeff; text-decoration: none; }
 .small { font-size: 80%; }
 &lt;/style&gt;
 
@@ -364,6 +379,7 @@ class: inverse, center, middle
 
 # Q1. What is the average fare by hour of day?
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: you need `strftime('%H', ...)` to extract the hour, `AVG()`, and `GROUP BY`.*
 
 --
@@ -392,6 +408,7 @@ Table: 1 records
 
 # Q2. What is the monthly conversion rate (requests → accepted)?
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: you need `SUM(accepted) / COUNT(*)` and watch out for integer division.*
 
 --
@@ -426,6 +443,7 @@ Table: 6 records
 
 # Q3. How often does surge pricing kick in, and what's the average multiplier?
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: use the `CASE WHEN ... THEN 1 ELSE 0 END` trick inside `SUM()` and `AVG()`.*
 
 --

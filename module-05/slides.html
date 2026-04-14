@@ -24,6 +24,21 @@ class: center, middle, inverse, title-slide
 &lt;style type="text/css"&gt;
 .remark-code, .remark-inline-code { font-size: 80%; }
 .remark-slide-content { padding: 1em 2em; }
+.write-ref {
+  position: absolute;
+  bottom: 12px;
+  right: 90px;
+  background: #f0f8ff;
+  border: 1px solid #aac;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  text-decoration: none;
+  color: #336;
+  font-weight: bold;
+  z-index: 100;
+}
+.write-ref:hover { background: #ddeeff; text-decoration: none; }
 .small { font-size: 80%; }
 &lt;/style&gt;
 
@@ -112,6 +127,7 @@ Three parts:
 
 # Q: For each driver, find their highest-fare ride.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: `ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY fare_usd DESC)`, then filter for rank = 1.*
 
 --
@@ -151,6 +167,7 @@ Table: 5 records
 
 # Q: For each ride, how many hours since the driver's previous ride?
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: `LAG(started_at, 1) OVER (PARTITION BY driver_id ORDER BY started_at)`.*
 
 --
@@ -190,6 +207,7 @@ For the first ride per driver, `LAG` returns NULL.
 
 # Q: Compute a 7-day rolling average of daily ride counts.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: pre-aggregate to one row per day, then `AVG(...) OVER (ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`.*
 
 --
@@ -234,6 +252,7 @@ Table: 7 records
 
 # Q: Find drivers in the bottom 10% of their city by acceptance rate.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: `NTILE(10) OVER (PARTITION BY city_id ORDER BY accept_rate)`, then filter for decile = 1.*
 
 --
@@ -277,6 +296,7 @@ Table: 5 records
 
 # Q: What is each driver's longest streak of consecutive days with at least one ride?
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: the "gaps and islands" trick — subtract `ROW_NUMBER()` from the date to get a constant for each consecutive run.*
 
 --

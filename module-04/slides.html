@@ -24,6 +24,21 @@ class: center, middle, inverse, title-slide
 &lt;style type="text/css"&gt;
 .remark-code, .remark-inline-code { font-size: 80%; }
 .remark-slide-content { padding: 1em 2em; }
+.write-ref {
+  position: absolute;
+  bottom: 12px;
+  right: 90px;
+  background: #f0f8ff;
+  border: 1px solid #aac;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  text-decoration: none;
+  color: #336;
+  font-weight: bold;
+  z-index: 100;
+}
+.write-ref:hover { background: #ddeeff; text-decoration: none; }
 .small { font-size: 80%; }
 &lt;/style&gt;
 
@@ -119,6 +134,7 @@ Each CTE = one logical step. Read top-to-bottom like a script.
 
 # Q: For each rider, find the date of their first ride and the city it was in.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: CTE to find `MIN(started_at)` per rider, then JOIN back to get the city.*
 
 --
@@ -157,6 +173,7 @@ Table: 5 records
 
 # Q: Build a December funnel (request → ride → 5-star) using a chain of CTEs.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 --
 
 ```sql
@@ -186,6 +203,7 @@ The pattern: each CTE is a step. Easy to test in isolation.
 
 # Q: Find riders who were active in each of the last 4 weeks of December.
 
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 *Hint: collapse requests to rider × week, then `HAVING COUNT(DISTINCT week) &gt;= 4`.*
 
 --
