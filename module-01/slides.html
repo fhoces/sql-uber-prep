@@ -42,6 +42,32 @@ class: center, middle, inverse, title-slide
 
 ---
 
+# Why SQL? (You can do all of this in R)
+
+Yes — but there are three reasons you'll use SQL anyway:
+
+--
+
+**1. Scale.** R loads everything into RAM. A 10GB dataset crashes your laptop. A SQL database handles it without blinking — the data stays on disk, and only the result comes back.
+
+--
+
+**2. The data already lives there.** At most tech companies, you don't get a CSV. You get access to a database with billions of rows. SQL is how you talk to it.
+
+--
+
+**3. It's the lingua franca.** Every data tool speaks SQL. Every data person knows SQL. When a PM asks "how many rides last week?", the answer starts with `SELECT COUNT(*)`.
+
+---
+
+# Why SQL? Speed comparison
+
+&lt;img src="slides_files/figure-html/speed-bench-1.png" style="display: block; margin: auto;" /&gt;
+
+.small[At small sizes R and SQL are comparable. As data grows, the database engine scales better — and production databases (Postgres, Spark) scale to billions of rows where R simply can't load the data.]
+
+---
+
 # What This Course Is
 
 A 5-module SQL refresher targeted at **applied economist / data science** interviews in tech.
