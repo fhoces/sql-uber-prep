@@ -15,6 +15,8 @@ output:
 .remark-code, .remark-inline-code { font-size: 80%; }
 .remark-slide-content { padding: 1em 2em; }
 .small { font-size: 80%; }
+.two-col { display: flex; align-items: flex-start; gap: 2em; }
+.col-narrow { flex: 1; }
 ```
 
 ```{r setup, include=FALSE}
@@ -76,19 +78,30 @@ Three things:
 
 # Inner JOIN: The Source Tables
 
-**Table 1: rides** (we want the ride info)
+.small[
+<div class="two-col">
+<div class="col-narrow">
+
+**rides** (we want ride info)
 
 ```{sql inner-src1, eval=TRUE}
-SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 4;
+SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 3;
 ```
 
-**Table 2: drivers** (we want the driver's gender)
+</div>
+<div class="col-narrow">
+
+**drivers** (we want gender)
 
 ```{sql inner-src2, eval=TRUE}
-SELECT driver_id, gender FROM drivers LIMIT 4;
+SELECT driver_id, gender FROM drivers LIMIT 3;
 ```
 
-The linking column is `driver_id` — it appears in both tables.
+</div>
+</div>
+]
+
+The linking column is `driver_id` — it appears in both tables. The JOIN matches rows where they agree.
 
 ---
 count: false
@@ -112,17 +125,30 @@ Only rows where `driver_id` exists in **both** tables are kept.
 
 # LEFT JOIN: The Source Tables
 
-**Table 1: requests** (all requests, including rejected ones)
+.small[
+<div class="two-col">
+<div class="col-narrow">
+
+**requests** (all, incl. rejected)
 
 ```{sql left-src1, eval=TRUE}
-SELECT request_id, rider_id, accepted FROM requests LIMIT 4;
+SELECT request_id, accepted FROM requests LIMIT 3;
 ```
 
-**Table 2: rides** (only accepted requests have a matching ride)
+</div>
+<div class="col-narrow">
+
+**rides** (only accepted ones match)
 
 ```{sql left-src2, eval=TRUE}
-SELECT request_id, ride_id, fare_usd FROM rides LIMIT 4;
+SELECT request_id, ride_id, fare_usd FROM rides LIMIT 3;
 ```
+
+</div>
+</div>
+]
+
+LEFT JOIN keeps **all** rows from the left table. Unmatched rows get NULLs for the right side.
 
 ---
 count: false
