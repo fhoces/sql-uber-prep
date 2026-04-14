@@ -163,26 +163,34 @@ HAVING AVG(r.fare_usd) &gt; (SELECT AVG(fare_usd) FROM rides)
 
 The `(SELECT AVG(fare_usd) FROM rides)` is a **scalar subquery** — a mini-query that returns one number, used here like a constant.
 
---
+---
+count: false
 
-**The full query + result:**
+# Q: Compare to global average — full query + result
 
+.pull-left[
 .small[
-
 ```sql
-SELECT c.name AS city, ROUND(AVG(r.fare_usd), 2) AS avg_fare,
-       (SELECT ROUND(AVG(fare_usd), 2) FROM rides) AS global_avg
+SELECT c.name AS city,
+  ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+  (SELECT ROUND(AVG(fare_usd), 2)
+   FROM rides) AS global_avg
 FROM rides r
-JOIN requests req ON r.request_id = req.request_id
-JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-JOIN cities c ON n.city_id = c.city_id
+JOIN requests req
+  ON r.request_id = req.request_id
+JOIN neighborhoods n
+  ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c
+  ON n.city_id = c.city_id
 GROUP BY c.name
-HAVING AVG(r.fare_usd) &gt; (SELECT AVG(fare_usd) FROM rides)
+HAVING AVG(r.fare_usd) &gt;
+  (SELECT AVG(fare_usd) FROM rides)
 ORDER BY avg_fare DESC;
 ```
+]
+]
 
-
-
+.pull-right[
 
 Table: 4 records
 
@@ -192,6 +200,8 @@ Table: 4 records
 |Chicago       |    12.03|      12.01|
 |Austin        |    12.03|      12.01|
 |San Francisco |    12.02|      12.01|
+
+Only cities with `avg_fare &gt; global_avg` survive the `HAVING` filter.
 ]
 
 ---
