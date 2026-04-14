@@ -416,8 +416,9 @@ Table: 5 records
 ```sql
 SELECT r.ride_id,
        r.driver_id,
+       d.signup_date,
        date(r.started_at) AS ride_date,
-       julianday(r.started_at) - julianday(d.signup_date) AS tenure_days
+       ROUND(julianday(r.started_at) - julianday(d.signup_date)) AS tenure_days
 FROM   rides r
 JOIN   drivers d ON r.driver_id = d.driver_id
 ORDER BY r.ride_id
@@ -429,13 +430,13 @@ LIMIT 5;
 
 Table: 5 records
 
-|ride_id | driver_id|ride_date  | tenure_days|
-|:-------|---------:|:----------|-----------:|
-|1       |       429|2025-08-19 |   1034.0053|
-|2       |        83|2025-08-19 |   1220.0063|
-|3       |       535|2025-01-04 |   -137.9961|
-|4       |       101|2025-08-05 |    972.0028|
-|5       |        85|2025-06-13 |    698.0021|
+|ride_id | driver_id|signup_date |ride_date  | tenure_days|
+|:-------|---------:|:-----------|:----------|-----------:|
+|1       |       429|2022-10-20  |2025-08-19 |        1034|
+|2       |        83|2022-04-17  |2025-08-19 |        1220|
+|3       |       535|2025-05-22  |2025-01-04 |        -138|
+|4       |       101|2022-12-07  |2025-08-05 |         972|
+|5       |        85|2023-07-16  |2025-06-13 |         698|
 
 ---
 

@@ -289,8 +289,9 @@ LIMIT 5;
 ```{sql q-tenure, eval=TRUE}
 SELECT r.ride_id,
        r.driver_id,
+       d.signup_date,
        date(r.started_at) AS ride_date,
-       julianday(r.started_at) - julianday(d.signup_date) AS tenure_days
+       ROUND(julianday(r.started_at) - julianday(d.signup_date)) AS tenure_days
 FROM   rides r
 JOIN   drivers d ON r.driver_id = d.driver_id
 ORDER BY r.ride_id
