@@ -191,6 +191,9 @@ The `WHERE r.ride_id IS NULL` keeps only drivers whose LEFT JOIN produced no mat
 
 # Pattern: Multi-table chain
 
+When the column you want lives several tables away, you **chain** joins. Here we want the city *name* (in `cities`) for each ride (in `rides`), but they're linked through `requests` → `neighborhoods` → `cities`.
+
+.small[
 ```{sql multi, eval=TRUE}
 SELECT c.name AS city,
        COUNT(*) AS n_rides,
@@ -202,10 +205,21 @@ JOIN   cities c ON n.city_id = c.city_id
 GROUP BY c.name
 ORDER BY n_rides DESC;
 ```
+]
 
---
+The single-letter aliases (`r`, `req`, `n`, `c`) are just shorthand — `c.name` means "the `name` column from the `cities` table." Like `cities$name` in R.
 
-Build chains step-by-step. Don't try to write a 5-table join from scratch.
+<details><summary>Click here to see how this would be done in R</summary>
+<pre>
+rides |>
+  left_join(requests, by = "request_id") |>
+  left_join(neighborhoods, by = c("pickup_nbhd_id" = "nbhd_id")) |>
+  left_join(cities, by = "city_id") |>
+  group_by(city = name) |>
+  summarise(n_rides = n(), avg_fare = round(mean(fare_usd), 2)) |>
+  arrange(desc(n_rides))
+</pre>
+</details>
 
 ---
 
