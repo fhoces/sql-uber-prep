@@ -282,21 +282,18 @@ LIMIT 5;
 
 # Q2. For each ride, how many days had the driver been on the platform?
 
-*Hint: JOIN `rides` to `drivers`, then compute `julianday(started_at) - julianday(signup_date)`.*
+*Hint: JOIN `rides` to `drivers`, then `julianday(started_at) - julianday(signup_date)`.*
 
 --
 
+.small[
 ```{sql q-tenure, eval=TRUE}
-SELECT r.ride_id,
-       r.driver_id,
-       d.signup_date,
-       date(r.started_at) AS ride_date,
+SELECT r.ride_id, r.driver_id,
        ROUND(julianday(r.started_at) - julianday(d.signup_date)) AS tenure_days
-FROM   rides r
-JOIN   drivers d ON r.driver_id = d.driver_id
-ORDER BY r.ride_id
+FROM rides r JOIN drivers d ON r.driver_id = d.driver_id
 LIMIT 5;
 ```
+]
 
 ---
 

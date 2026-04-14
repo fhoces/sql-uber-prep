@@ -408,20 +408,16 @@ Table: 5 records
 
 # Q2. For each ride, how many days had the driver been on the platform?
 
-*Hint: JOIN `rides` to `drivers`, then compute `julianday(started_at) - julianday(signup_date)`.*
+*Hint: JOIN `rides` to `drivers`, then `julianday(started_at) - julianday(signup_date)`.*
 
 --
 
+.small[
 
 ```sql
-SELECT r.ride_id,
-       r.driver_id,
-       d.signup_date,
-       date(r.started_at) AS ride_date,
+SELECT r.ride_id, r.driver_id,
        ROUND(julianday(r.started_at) - julianday(d.signup_date)) AS tenure_days
-FROM   rides r
-JOIN   drivers d ON r.driver_id = d.driver_id
-ORDER BY r.ride_id
+FROM rides r JOIN drivers d ON r.driver_id = d.driver_id
 LIMIT 5;
 ```
 
@@ -430,13 +426,14 @@ LIMIT 5;
 
 Table: 5 records
 
-|ride_id | driver_id|signup_date |ride_date  | tenure_days|
-|:-------|---------:|:-----------|:----------|-----------:|
-|1       |       429|2022-10-20  |2025-08-19 |        1034|
-|2       |        83|2022-04-17  |2025-08-19 |        1220|
-|3       |       535|2025-05-22  |2025-01-04 |        -138|
-|4       |       101|2022-12-07  |2025-08-05 |         972|
-|5       |        85|2023-07-16  |2025-06-13 |         698|
+|ride_id | driver_id| tenure_days|
+|:-------|---------:|-----------:|
+|1       |       429|        1034|
+|2       |        83|        1220|
+|3       |       535|        -138|
+|4       |       101|         972|
+|5       |        85|         698|
+]
 
 ---
 
