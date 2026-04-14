@@ -90,14 +90,53 @@ Table: 5 records
 
 ---
 
-# Pattern 2: Which cities have an average fare above the global average?
+# Q: Which cities have an average fare above the global average?
+
+Let's build this step by step.
 
 --
 
+**Step 1.** What's the global average fare? A standalone query:
 
 ```sql
-SELECT c.name AS city,
-       ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+SELECT ROUND(AVG(fare_usd), 2) FROM rides;
+-- returns a single number, e.g., 12.02
+```
+
+--
+
+**Step 2.** Compute the average fare **per city** (same JOIN chain as Pattern 1):
+
+```sql
+SELECT c.name AS city, ROUND(AVG(r.fare_usd), 2) AS avg_fare
+FROM rides r
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+GROUP BY c.name;
+```
+
+---
+count: false
+
+# Q: Which cities have an average fare above the global average?
+
+**Step 3.** Keep only cities whose avg fare beats the global avg. Paste Step 1's query inside `HAVING`:
+
+```sql
+HAVING AVG(r.fare_usd) &gt; (SELECT AVG(fare_usd) FROM rides)
+```
+
+The `(SELECT AVG(fare_usd) FROM rides)` is a **scalar subquery** — a mini-query that returns one number, used here like a constant.
+
+--
+
+**The full query + result:**
+
+.small[
+
+```sql
+SELECT c.name AS city, ROUND(AVG(r.fare_usd), 2) AS avg_fare,
        (SELECT ROUND(AVG(fare_usd), 2) FROM rides) AS global_avg
 FROM rides r
 JOIN requests req ON r.request_id = req.request_id
@@ -119,10 +158,7 @@ Table: 4 records
 |Chicago       |    12.03|      12.01|
 |Austin        |    12.03|      12.01|
 |San Francisco |    12.02|      12.01|
-
---
-
-The trick: a scalar subquery in `HAVING` for the global benchmark.
+]
 
 ---
 
