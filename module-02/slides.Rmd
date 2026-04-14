@@ -78,18 +78,11 @@ Three things:
 
 # Inner JOIN: The Source Tables
 
-.small[
-<div class="two-col">
-<div class="col-narrow">
-
 **rides** (we want ride info)
 
 ```{sql inner-src1, eval=TRUE}
 SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 3;
 ```
-
-</div>
-<div class="col-narrow">
 
 **drivers** (we want gender)
 
@@ -97,11 +90,7 @@ SELECT ride_id, driver_id, fare_usd FROM rides LIMIT 3;
 SELECT driver_id, gender FROM drivers LIMIT 3;
 ```
 
-</div>
-</div>
-]
-
-The linking column is `driver_id` — it appears in both tables. The JOIN matches rows where they agree.
+The linking column is `driver_id` — it appears in both tables.
 
 ---
 count: false
@@ -125,28 +114,17 @@ Only rows where `driver_id` exists in **both** tables are kept.
 
 # LEFT JOIN: The Source Tables
 
-.small[
-<div class="two-col">
-<div class="col-narrow">
-
 **requests** (all, incl. rejected)
 
 ```{sql left-src1, eval=TRUE}
 SELECT request_id, accepted FROM requests LIMIT 3;
 ```
 
-</div>
-<div class="col-narrow">
-
-**rides** (only accepted ones match)
+**rides** (only accepted requests have a matching ride)
 
 ```{sql left-src2, eval=TRUE}
 SELECT request_id, ride_id, fare_usd FROM rides LIMIT 3;
 ```
-
-</div>
-</div>
-]
 
 LEFT JOIN keeps **all** rows from the left table. Unmatched rows get NULLs for the right side.
 

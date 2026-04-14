@@ -83,10 +83,6 @@ Three things:
 
 # Inner JOIN: The Source Tables
 
-.small[
-&lt;div class="two-col"&gt;
-&lt;div class="col-narrow"&gt;
-
 **rides** (we want ride info)
 
 
@@ -104,9 +100,6 @@ Table: 3 records
 |1       |       429|    16.52|
 |2       |        83|    19.78|
 |3       |       535|    26.97|
-
-&lt;/div&gt;
-&lt;div class="col-narrow"&gt;
 
 **drivers** (we want gender)
 
@@ -126,11 +119,7 @@ Table: 3 records
 |2         |M      |
 |3         |M      |
 
-&lt;/div&gt;
-&lt;/div&gt;
-]
-
-The linking column is `driver_id` — it appears in both tables. The JOIN matches rows where they agree.
+The linking column is `driver_id` — it appears in both tables.
 
 ---
 count: false
@@ -168,10 +157,6 @@ Only rows where `driver_id` exists in **both** tables are kept.
 
 # LEFT JOIN: The Source Tables
 
-.small[
-&lt;div class="two-col"&gt;
-&lt;div class="col-narrow"&gt;
-
 **requests** (all, incl. rejected)
 
 
@@ -190,10 +175,7 @@ Table: 3 records
 |2          |        1|
 |3          |        1|
 
-&lt;/div&gt;
-&lt;div class="col-narrow"&gt;
-
-**rides** (only accepted ones match)
+**rides** (only accepted requests have a matching ride)
 
 
 ```sql
@@ -210,10 +192,6 @@ Table: 3 records
 |1          |       1|    16.52|
 |2          |       2|    19.78|
 |3          |       3|    26.97|
-
-&lt;/div&gt;
-&lt;/div&gt;
-]
 
 LEFT JOIN keeps **all** rows from the left table. Unmatched rows get NULLs for the right side.
 
