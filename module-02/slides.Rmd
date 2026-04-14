@@ -148,23 +148,30 @@ This is the key difference from INNER JOIN: unmatched left-side rows stay in the
 
 ---
 
-# Pattern: Anti-Join
+# Anti-Join: "Who has NO match?"
 
-"Drivers who have never had a ride from a high-minority neighborhood":
+**The question:** which drivers have never completed a ride?
+
+In dplyr: `anti_join(drivers, rides, by = "driver_id")` — one line, done.
+
+--
+
+SQL has **no `ANTI JOIN` keyword**. You fake it in two steps:
+
+1. **LEFT JOIN** — keep all drivers; NULLs where no ride exists
+2. **Filter for NULLs** — keep only the unmatched ones
 
 ```{sql anti, eval=TRUE}
-SELECT d.driver_id
+SELECT d.driver_id, d.gender
 FROM   drivers d
-WHERE  NOT EXISTS (
-  SELECT 1
-  FROM   rides r
-  JOIN   requests req ON r.request_id = req.request_id
-  JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  WHERE  r.driver_id = d.driver_id
-    AND  n.pct_minority >= 0.5
-)
+LEFT JOIN rides r ON d.driver_id = r.driver_id
+WHERE  r.ride_id IS NULL
 LIMIT 5;
 ```
+
+--
+
+The `WHERE r.ride_id IS NULL` keeps only drivers whose LEFT JOIN produced no match — i.e., drivers with zero rides. That's the anti-join.
 
 ---
 
