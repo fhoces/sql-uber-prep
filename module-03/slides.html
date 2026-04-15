@@ -325,7 +325,7 @@ Read each column as: "of all the rows, how many passed this filter?" The numbers
 
 &lt;a class="write-ref" href="#write-order"&gt;WO&lt;/a&gt;
 
-A **CTE** (Common Table Expression) is a named temporary result defined with `WITH ... AS (...)`. Think of it as assigning an intermediate step to a variable — like `cohort &lt;- riders |&gt; mutate(...)` in R. It only exists for this one query. (Covered fully in Module 4.)
+A **CTE** (Common Table Expression) lets you name a temporary result. Read `WITH cohort AS (...)` as **"let `cohort` = the result of this query"** — like `cohort &lt;- riders |&gt; ...` in R. Multiple CTEs are separated by commas. It only exists for this one query. (Covered fully in Module 4.)
 
 **Step 1.** Build a CTE for each rider's cohort (their signup month):
 
