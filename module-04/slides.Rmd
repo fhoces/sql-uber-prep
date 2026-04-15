@@ -81,22 +81,48 @@ The inner `(SELECT AVG(...) FROM rides)` runs first, returns one number (e.g. 12
 
 --
 
-**Table:** returns a table, used in `FROM`.
+**Table:** returns a table, used in `FROM`. (Next slide.)
+
+---
+
+# Subquery Flavor 2: Table Subquery
+
+The inner query produces a temporary table; the outer query uses it as its data source.
 
 ```sql
 SELECT * FROM (
   SELECT driver_id, COUNT(*) AS n FROM rides GROUP BY driver_id
-) t WHERE t.n > 100;
+) t
+WHERE t.n > 100;
 ```
 
 --
 
-**Correlated:** references the outer query, runs once per outer row. Convenient but slow.
+Reading inside-out:
+
+1. **Inner** (in parentheses): `SELECT driver_id, COUNT(*) ... GROUP BY driver_id` → produces a table of driver_id + ride count
+2. **`t`**: names that temporary table so the outer query can reference it
+3. **Outer**: `SELECT * FROM t WHERE t.n > 100` → filters for 100+ rides
+
+--
+
+In R: `rides |> count(driver_id) |> filter(n > 100)`. SQL can't chain like that, so you nest instead.
+
+---
+
+# Subquery Flavor 3: Correlated Subquery
+
+The inner query **references the outer query** — it runs once per outer row. Convenient but slow.
 
 ```sql
-SELECT d.*, (SELECT COUNT(*) FROM rides r WHERE r.driver_id = d.driver_id) AS n
+SELECT d.driver_id, d.gender,
+       (SELECT COUNT(*) FROM rides r WHERE r.driver_id = d.driver_id) AS n_rides
 FROM   drivers d;
 ```
+
+--
+
+For each row in `drivers`, the inner query counts that driver's rides. Like running a separate `filter + nrow` for every single driver — works, but expensive on large tables. Usually better to use a JOIN + GROUP BY instead.
 
 ---
 
