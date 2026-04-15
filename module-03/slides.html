@@ -408,7 +408,7 @@ Each row = one (cohort, month) pair. To see retention *rates*, divide `active_ri
 
 ---
 
-# Common Traps
+# Common Mistakes
 
 **1. Selecting non-aggregated columns without grouping.**
 
@@ -435,6 +435,16 @@ Strict SQL (Postgres) errors out. SQLite silently picks an arbitrary `driver_id`
 --
 
 **4. Filtering aggregates in `WHERE`.** Doesn't work. Use `HAVING`.
+
+```sql
+-- WRONG: aggregates don't exist in WHERE (runs before GROUP BY)
+SELECT city, COUNT(*) AS n FROM rides
+WHERE COUNT(*) &gt; 1000 GROUP BY city;
+
+-- RIGHT: HAVING runs after GROUP BY, so aggregates exist
+SELECT city, COUNT(*) AS n FROM rides
+GROUP BY city HAVING COUNT(*) &gt; 1000;
+```
 
 ---
 class: inverse
