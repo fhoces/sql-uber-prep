@@ -46,9 +46,9 @@ knitr::opts_chunk$set(connection = "con")
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
-<tr><td><b>2</b></td><td><b>JOINs</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">SC</a></td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Sample Code</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">M1</a></td></tr>
+<tr><td><b>2</b></td><td><b>JOINs</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">M2</a></td></tr>
 <tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
 <tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
 <tr><td>5</td><td>Window Functions</td><td>upcoming</td><td></td></tr>
@@ -387,8 +387,8 @@ ORDER BY c.name, n_rides DESC;
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Sample Code</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">M1</a></td></tr>
 <tr><td>2</td><td>JOINs <i>(just finished)</i></td><td>✓ done</td></tr>
 <tr><td><b>3</b></td><td><b>GROUP BY, HAVING, Conversion Funnels</b></td><td>next</td><td></td></tr>
 <tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>

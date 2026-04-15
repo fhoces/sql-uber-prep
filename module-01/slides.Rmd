@@ -47,8 +47,8 @@ knitr::opts_chunk$set(connection = "con")
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
-<tr><td><b>1</b></td><td><b>SELECT, WHERE, Aggregates</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">SC</a></td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Sample Code</th></tr>
+<tr><td><b>1</b></td><td><b>SELECT, WHERE, Aggregates</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">M1</a></td></tr>
 <tr><td>2</td><td>JOINs</td><td>upcoming</td><td></td></tr>
 <tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
 <tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
@@ -439,7 +439,7 @@ LIMIT 12;
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Sample Code</th></tr>
 <tr><td>1</td><td>SELECT, WHERE, Aggregates <i>(just finished)</i></td><td>✓ done</td></tr>
 <tr><td><b>2</b></td><td><b>JOINs</b></td><td>next</td><td></td></tr>
 <tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
