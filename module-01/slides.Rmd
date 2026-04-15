@@ -29,7 +29,8 @@ output:
   z-index: 100;
 }
 .write-ref:hover { background: #ddeeff; text-decoration: none; }
-.sample-code .remark-code { font-size: 95%; line-height: 1.4; }
+.sample-code h1 { font-size: 1.2em; margin-bottom: 0.2em; }
+.sample-code .remark-code { font-size: 110%; line-height: 1.35; }
 .small { font-size: 80%; }
 ```
 
