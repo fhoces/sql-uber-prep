@@ -290,6 +290,8 @@ Read each column as: "of all the rows, how many passed this filter?" The numbers
 
 **Why `1.0 *`?** Without it, SQLite does integer division: `3 / 10 = 0` (truncated). Multiplying by `1.0` forces float math: `1.0 * 3 / 10 = 0.3`. In R this never comes up because R uses doubles by default.
 
+**Why not `step4_5star / step1_requests`?** You can't reference column aliases within the same SELECT — they don't exist yet (SELECT runs as one step). You have to repeat the full expressions, or use a CTE to compute the columns first and divide in the outer query.
+
 ---
 
 # Q: For each signup-month cohort, how many riders were active in each subsequent month?
