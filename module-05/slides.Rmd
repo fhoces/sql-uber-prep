@@ -46,12 +46,12 @@ knitr::opts_chunk$set(connection = "con")
 <a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;">Schema ref</a>
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
-<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
-<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
-<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td></tr>
-<tr><td><b>5</b></td><td><b>Window Functions</b> <i>(you are here)</i></td><td>← current</td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td><td><a href="../module-02/slides.html#sample">SC</a></td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td><td><a href="../module-03/slides.html#sample">SC</a></td></tr>
+<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td><td><a href="../module-04/slides.html#sample">SC</a></td></tr>
+<tr><td><b>5</b></td><td><b>Window Functions</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">SC</a></td></tr>
 </table>
 
 ---
@@ -263,7 +263,7 @@ SELECT driver_id, MAX(streak_len) FROM streaks GROUP BY driver_id;
 
 ---
 
-# Common Traps
+# Common Mistakes
 
 **1. Missing `ORDER BY` for ranking.** `ROW_NUMBER() OVER (PARTITION BY x)` without ORDER BY is non-deterministic.
 
@@ -302,6 +302,7 @@ class: inverse
 
 ---
 class: sample-code
+name: sample
 
 # Sample Code: Daily Revenue Rankings & Trends
 
@@ -328,6 +329,7 @@ LIMIT 10;
 ---
 class: sample-code
 
+name: sample-full
 # Sample Code: City Dashboard (All Modules Combined)
 
 ```sql
@@ -361,12 +363,12 @@ ORDER BY fare_rank;
 <a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;">Schema ref</a>
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
-<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td></tr>
-<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td></tr>
-<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td></tr>
-<tr><td>5</td><td>Window Functions <i>(just finished)</i></td><td>✓ done</td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
+<tr><td>2</td><td><a href="../module-02/slides.html">JOINs</a></td><td>✓ done</td><td><a href="../module-02/slides.html#sample">SC</a></td></tr>
+<tr><td>3</td><td><a href="../module-03/slides.html">GROUP BY, HAVING, Conversion Funnels</a></td><td>✓ done</td><td><a href="../module-03/slides.html#sample">SC</a></td></tr>
+<tr><td>4</td><td><a href="../module-04/slides.html">Subqueries and CTEs</a></td><td>✓ done</td><td><a href="../module-04/slides.html#sample">SC</a></td></tr>
+<tr><td>5</td><td>Window Functions <i>(just finished)</i></td><td>✓ done</td><td><a href="#sample">SC</a></td></tr>
 </table>
 
 **You're done with the SQL course.** Time to drill the questions until you can write each one in two minutes flat.

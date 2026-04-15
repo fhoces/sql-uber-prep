@@ -47,12 +47,12 @@ knitr::opts_chunk$set(connection = "con")
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
-<tr><td><b>1</b></td><td><b>SELECT, WHERE, Aggregates</b> <i>(you are here)</i></td><td>← current</td></tr>
-<tr><td>2</td><td>JOINs</td><td>upcoming</td></tr>
-<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td></tr>
-<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
-<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><td><b>1</b></td><td><b>SELECT, WHERE, Aggregates</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">SC</a></td></tr>
+<tr><td>2</td><td>JOINs</td><td>upcoming</td><td></td></tr>
+<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td><td></td></tr>
 </table>
 
 ---
@@ -305,7 +305,7 @@ The `CASE WHEN ... THEN 1 ELSE 0 END` trick is the SQL version of `mean(x == "fo
 
 ---
 
-# Common Traps
+# Common Mistakes
 
 - **Integer division:** `SUM(x) / COUNT(*)` → 0 if both are integers and the result < 1. Always cast: `1.0 * SUM(x) / COUNT(*)`
 
@@ -414,6 +414,7 @@ class: inverse
 ---
 class: sample-code
 
+name: sample
 # Sample Code: Monthly Rides, Drivers, Avg Fare & Surge Rate
 
 ```sql
@@ -438,10 +439,10 @@ LIMIT 12;
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
 <tr><td>1</td><td>SELECT, WHERE, Aggregates <i>(just finished)</i></td><td>✓ done</td></tr>
-<tr><td><b>2</b></td><td><b>JOINs</b></td><td>next</td></tr>
-<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td></tr>
-<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
-<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+<tr><td><b>2</b></td><td><b>JOINs</b></td><td>next</td><td></td></tr>
+<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td><td></td></tr>
 </table>

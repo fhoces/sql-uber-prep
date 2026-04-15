@@ -46,12 +46,12 @@ knitr::opts_chunk$set(connection = "con")
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
-<tr><td><b>2</b></td><td><b>JOINs</b> <i>(you are here)</i></td><td>← current</td></tr>
-<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td></tr>
-<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
-<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
+<tr><td><b>2</b></td><td><b>JOINs</b> <i>(you are here)</i></td><td>← current</td><td><a href="#sample">SC</a></td></tr>
+<tr><td>3</td><td>GROUP BY, HAVING, Conversion Funnels</td><td>upcoming</td><td></td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td><td></td></tr>
 </table>
 
 ---
@@ -254,7 +254,7 @@ rides |>
 
 ---
 
-# Common Traps
+# Common Mistakes
 
 **1. Cartesian explosion.** Forget the `ON` clause and you get every row in A paired with every row in B. With 39k rides × 800 drivers = 31M rows. **Always check the join before running.**
 
@@ -362,6 +362,7 @@ class: inverse
 ---
 class: sample-code
 
+name: sample
 # Sample Code: Rides & Riders Per City/Gender
 
 ```sql
@@ -386,10 +387,10 @@ ORDER BY c.name, n_rides DESC;
 # Course Map
 
 <table>
-<tr><th>#</th><th>Module</th><th>Status</th></tr>
-<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td></tr>
+<tr><th>#</th><th>Module</th><th>Status</th><th>Ref</th></tr>
+<tr><td>1</td><td><a href="../module-01/slides.html">SELECT, WHERE, Aggregates</a></td><td>✓ done</td><td><a href="../module-01/slides.html#sample">SC</a></td></tr>
 <tr><td>2</td><td>JOINs <i>(just finished)</i></td><td>✓ done</td></tr>
-<tr><td><b>3</b></td><td><b>GROUP BY, HAVING, Conversion Funnels</b></td><td>next</td></tr>
-<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td></tr>
-<tr><td>5</td><td>Window Functions</td><td>upcoming</td></tr>
+<tr><td><b>3</b></td><td><b>GROUP BY, HAVING, Conversion Funnels</b></td><td>next</td><td></td></tr>
+<tr><td>4</td><td>Subqueries and CTEs</td><td>upcoming</td><td></td></tr>
+<tr><td>5</td><td>Window Functions</td><td>upcoming</td><td></td></tr>
 </table>
