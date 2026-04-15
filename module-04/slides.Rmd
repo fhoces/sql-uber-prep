@@ -65,7 +65,7 @@ Once a query gets past ~5 lines, you need a way to organize intermediate results
 
 --
 
-Both compile to similar plans. **Default to CTEs** — they're more readable, easier to debug, and let you build complex queries in clean steps.
+The database engine converts both into the same internal strategy (called an "execution plan") — so **performance is the same**. Choose between them for readability, not speed. **Default to CTEs.**
 
 ---
 
