@@ -84,10 +84,6 @@ SELECT * FROM rides WHERE fare_usd &gt; (SELECT AVG(fare_usd) FROM rides);
 
 The inner `(SELECT AVG(...) FROM rides)` runs first, returns one number (e.g. 12.03), then the outer query uses it: `WHERE fare_usd &gt; 12.03`. In R: `filter(fare_usd &gt; mean(fare_usd))` — SQL can't use `mean()` inline, so you wrap it in a subquery.
 
---
-
-**Table:** returns a table, used in `FROM`. (Next slide.)
-
 ---
 
 # Subquery Flavor 2: Table Subquery
