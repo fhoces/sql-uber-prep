@@ -238,6 +238,9 @@ The CTE finds the extremum; the outer query re-joins to attach the rest of the r
 # Q: Build a December funnel (request → ride → 5-star) using a chain of CTEs.
 
 <a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
+
+A **funnel** counts how many users survive each step: here, how many December requests became completed rides, and how many of those got a 5-star rating.
+
 --
 
 ```sql
