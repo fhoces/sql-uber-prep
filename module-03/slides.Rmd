@@ -288,6 +288,8 @@ LEFT JOIN rides r ON req.request_id = r.request_id;
 
 Read each column as: "of all the rows, how many passed this filter?" The numbers should decrease at each step — that's the funnel.
 
+**Why `1.0 *`?** Without it, SQLite does integer division: `3 / 10 = 0` (truncated). Multiplying by `1.0` forces float math: `1.0 * 3 / 10 = 0.3`. In R this never comes up because R uses doubles by default.
+
 ---
 
 # Q: For each signup-month cohort, how many riders were active in each subsequent month?
