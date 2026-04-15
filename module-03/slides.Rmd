@@ -368,7 +368,19 @@ Each row = one (cohort, month) pair. To see retention *rates*, divide `active_ri
 
 # Common Traps
 
-**1. Selecting non-aggregated columns without grouping.** Strict SQL errors out; SQLite picks an arbitrary value (which is worse).
+**1. Selecting non-aggregated columns without grouping.**
+
+```sql
+-- WRONG: which driver_id does it pick? Arbitrary!
+SELECT city, driver_id, COUNT(*) AS n_rides
+FROM rides GROUP BY city;
+
+-- RIGHT: every non-aggregate column must be in GROUP BY
+SELECT city, driver_id, COUNT(*) AS n_rides
+FROM rides GROUP BY city, driver_id;
+```
+
+Strict SQL (Postgres) errors out. SQLite silently picks an arbitrary `driver_id` per city — which is worse because you get a result that *looks* fine but is wrong.
 
 --
 
