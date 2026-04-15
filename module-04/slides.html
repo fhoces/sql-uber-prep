@@ -260,6 +260,7 @@ A **funnel** counts how many users survive each step: here, how many December re
 
 --
 
+.small[
 ```sql
 WITH dec_requests AS (
   SELECT request_id, rider_id FROM requests
@@ -270,8 +271,34 @@ dec_rides AS (
   FROM dec_requests dr LEFT JOIN rides r ON dr.request_id = r.request_id
 ),
 funnel AS (
-  SELECT
-    COUNT(*) AS n_requests,
+  SELECT COUNT(*) AS n_requests,
+    SUM(CASE WHEN ride_id IS NOT NULL THEN 1 ELSE 0 END) AS n_completed,
+    SUM(CASE WHEN rider_rating = 5 THEN 1 ELSE 0 END) AS n_5star
+  FROM dec_rides
+)
+SELECT * FROM funnel;
+```
+]
+
+---
+count: false
+
+# Q: December funnel — result
+
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
+
+
+```sql
+WITH dec_requests AS (
+  SELECT request_id, rider_id FROM requests
+  WHERE date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+),
+dec_rides AS (
+  SELECT dr.*, r.ride_id, r.rider_rating
+  FROM dec_requests dr LEFT JOIN rides r ON dr.request_id = r.request_id
+),
+funnel AS (
+  SELECT COUNT(*) AS n_requests,
     SUM(CASE WHEN ride_id IS NOT NULL THEN 1 ELSE 0 END) AS n_completed,
     SUM(CASE WHEN rider_rating = 5 THEN 1 ELSE 0 END) AS n_5star
   FROM dec_rides
@@ -279,7 +306,14 @@ funnel AS (
 SELECT * FROM funnel;
 ```
 
---
+
+
+
+Table: 1 records
+
+| n_requests| n_completed| n_5star|
+|----------:|-----------:|-------:|
+|       4259|        3293|    1986|
 
 The pattern: each CTE is a step. Easy to test in isolation.
 
