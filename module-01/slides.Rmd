@@ -414,7 +414,7 @@ class: inverse
 ---
 class: sample-code
 
-# Sample Code
+# Sample Code: Monthly Rides, Drivers, Avg Fare & Surge Rate
 
 ```sql
 -- SELECT + WHERE + aggregates + GROUP BY + HAVING + ORDER BY + LIMIT

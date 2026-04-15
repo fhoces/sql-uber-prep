@@ -362,7 +362,7 @@ class: inverse
 ---
 class: sample-code
 
-# Sample Code
+# Sample Code: Rides & Riders Per City/Gender
 
 ```sql
 -- INNER JOIN + LEFT JOIN + anti-join + multi-table chain
