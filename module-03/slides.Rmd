@@ -92,7 +92,7 @@ Start with the data source (FROM), add joins, add GROUP BY. **Only then** go bac
 
 ---
 
-# Q: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
+# P1: Build a city-level dashboard with rides, drivers, avg fare, and revenue.
 
 <a class="write-ref" href="#write-order">WO</a>
 **Step 1.** Start from the `rides` table — that's where fares live.
@@ -129,7 +129,7 @@ GROUP BY c.name ORDER BY revenue DESC;
 ---
 count: false
 
-# Q: City-level dashboard — the full query + result
+# P1: City-level dashboard — full query + result
 
 <a class="write-ref" href="#write-order">WO</a>
 .small[
@@ -147,7 +147,7 @@ GROUP BY c.name ORDER BY revenue DESC;
 
 ---
 
-# Q: Which cities have an average fare above the global average?
+# P2: Which cities have an average fare above the global average?
 
 <a class="write-ref" href="#write-order">WO</a>
 Let's build this step by step.
@@ -177,7 +177,7 @@ GROUP BY c.name;
 ---
 count: false
 
-# Q: Which cities have an average fare above the global average?
+# P2: Which cities have an average fare above the global average?
 
 <a class="write-ref" href="#write-order">WO</a>
 **Step 3.** Keep only cities whose avg fare beats the global avg. Paste Step 1's query inside `HAVING`:
@@ -193,7 +193,7 @@ Note it says `fare_usd`, not `r.fare_usd`. The subquery is **self-contained** �
 ---
 count: false
 
-# Q: Compare to global average — full query + result
+# P2: Compare to global — full query + result
 
 <a class="write-ref" href="#write-order">WO</a>
 .pull-left[
@@ -236,7 +236,7 @@ Only cities with `avg_fare > global_avg` survive the `HAVING` filter.
 
 ---
 
-# Q: Build a funnel — how many requests become rides, and how many get 5 stars?
+# P3: Build a funnel — how many requests become rides, and how many get 5 stars?
 
 <a class="write-ref" href="#write-order">WO</a>
 
@@ -268,7 +268,7 @@ SUM(CASE WHEN r.rider_rating = 5 THEN 1 ELSE 0 END) AS step4_5star
 ---
 count: false
 
-# Q: Funnel — the full query + result
+# P3: Funnel — full query + result
 
 <a class="write-ref" href="#write-order">WO</a>
 
@@ -294,7 +294,7 @@ Read each column as: "of all the rows, how many passed this filter?" The numbers
 
 ---
 
-# Q: For each signup-month cohort, how many riders were active in each subsequent month?
+# P4: For each signup-month cohort, how many riders were active in each subsequent month?
 
 <a class="write-ref" href="#write-order">WO</a>
 
@@ -323,7 +323,7 @@ activity AS (
 ---
 count: false
 
-# Q: Cohort retention — Step 3
+# P4: Cohort retention — Step 3
 
 <a class="write-ref" href="#write-order">WO</a>
 
@@ -339,7 +339,7 @@ GROUP BY c.cohort_month, a.activity_month
 ---
 count: false
 
-# Q: Cohort retention — full query + result
+# P4: Cohort retention — full query + result
 
 <a class="write-ref" href="#write-order">WO</a>
 
