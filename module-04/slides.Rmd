@@ -177,33 +177,34 @@ Each CTE = one logical step. Read top-to-bottom like a script.
 
 <a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
 
-*Hint: use `ROW_NUMBER()` to rank each rider's rides by time, then keep rank = 1.*
+*Hint: find each rider's earliest ride time with `MIN()`, then re-join to get the city.*
 
 --
 
-**Step 1.** Rank each rider's rides chronologically, joining to get the city at the same time:
+**Step 1.** CTE: find the earliest `started_at` per rider:
 
 ```sql
-WITH ranked AS (
-  SELECT req.rider_id, r.started_at, c.name AS city,
-         ROW_NUMBER() OVER (PARTITION BY req.rider_id
-                            ORDER BY r.started_at) AS rk
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
   FROM rides r
   JOIN requests req ON r.request_id = req.request_id
-  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  JOIN cities c ON n.city_id = c.city_id
+  GROUP BY req.rider_id
 )
 ```
 
 --
 
-**Step 2.** Keep only rank 1 (the first ride):
+**Step 2.** Re-join back through `rides → requests` to get the city — matching on **both** `rider_id` and `started_at` so you don't accidentally grab another rider's ride at the same timestamp:
 
 ```sql
-SELECT rider_id, started_at, city FROM ranked WHERE rk = 1;
+SELECT fr.rider_id, fr.first_started_at, c.name AS city
+FROM first_ride fr
+JOIN requests req ON req.rider_id = fr.rider_id
+JOIN rides r ON r.request_id = req.request_id
+              AND r.started_at = fr.first_started_at
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id;
 ```
-
-No re-join needed — `ROW_NUMBER` picks one row per rider directly.
 
 ---
 count: false
@@ -214,19 +215,23 @@ count: false
 
 .small[
 ```{sql first, eval=TRUE}
-WITH ranked AS (
-  SELECT req.rider_id, r.started_at, c.name AS city,
-         ROW_NUMBER() OVER (PARTITION BY req.rider_id ORDER BY r.started_at) AS rk
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
   FROM rides r
   JOIN requests req ON r.request_id = req.request_id
-  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  JOIN cities c ON n.city_id = c.city_id
+  GROUP BY req.rider_id
 )
-SELECT rider_id, started_at, city FROM ranked WHERE rk = 1 LIMIT 3;
+SELECT fr.rider_id, fr.first_started_at, c.name AS city
+FROM first_ride fr
+JOIN requests req ON req.rider_id = fr.rider_id
+JOIN rides r ON r.request_id = req.request_id AND r.started_at = fr.first_started_at
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+LIMIT 3;
 ```
 ]
 
-This is a preview of Module 5's `ROW_NUMBER` pattern — the cleanest way to get "first/last/top per group."
+The CTE finds the extremum; the outer query re-joins to attach the rest of the row. In Module 5 you'll see `ROW_NUMBER` — a one-liner that replaces this whole pattern.
 
 ---
 
@@ -260,10 +265,10 @@ The pattern: each CTE is a step. Easy to test in isolation.
 
 ---
 
-# Q: Find riders who were active in each of the last 4 weeks of December.
+# Q: Find riders active in each of the last 4 weeks of December.
 
 <a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
-*Hint: collapse requests to rider × week, then `HAVING COUNT(DISTINCT week) >= 4`.*
+*Hint: collapse to rider × week, then `HAVING COUNT(DISTINCT week) >= 4`.*
 
 --
 
@@ -279,8 +284,6 @@ FROM active GROUP BY rider_id
 HAVING COUNT(DISTINCT week) >= 4 LIMIT 3;
 ```
 ]
-
-Trick: collapse each request to its week, then `HAVING COUNT(DISTINCT week) = N`.
 
 ---
 

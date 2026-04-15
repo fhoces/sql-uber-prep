@@ -51,11 +51,11 @@ class: center, middle, inverse, title-slide
 &lt;a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;"&gt;Schema ref&lt;/a&gt;
 
 &lt;table&gt;
-&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Ref&lt;/th&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Subqueries and CTEs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;td&gt;&lt;a href="#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Sample Code&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;M1&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html#sample"&gt;M2&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html#sample"&gt;M3&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Subqueries and CTEs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;td&gt;&lt;a href="#sample"&gt;M4&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
 
@@ -182,33 +182,34 @@ Each CTE = one logical step. Read top-to-bottom like a script.
 
 &lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
 
-*Hint: use `ROW_NUMBER()` to rank each rider's rides by time, then keep rank = 1.*
+*Hint: find each rider's earliest ride time with `MIN()`, then re-join to get the city.*
 
 --
 
-**Step 1.** Rank each rider's rides chronologically, joining to get the city at the same time:
+**Step 1.** CTE: find the earliest `started_at` per rider:
 
 ```sql
-WITH ranked AS (
-  SELECT req.rider_id, r.started_at, c.name AS city,
-         ROW_NUMBER() OVER (PARTITION BY req.rider_id
-                            ORDER BY r.started_at) AS rk
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
   FROM rides r
   JOIN requests req ON r.request_id = req.request_id
-  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  JOIN cities c ON n.city_id = c.city_id
+  GROUP BY req.rider_id
 )
 ```
 
 --
 
-**Step 2.** Keep only rank 1 (the first ride):
+**Step 2.** Re-join back through `rides → requests` to get the city — matching on **both** `rider_id` and `started_at` so you don't accidentally grab another rider's ride at the same timestamp:
 
 ```sql
-SELECT rider_id, started_at, city FROM ranked WHERE rk = 1;
+SELECT fr.rider_id, fr.first_started_at, c.name AS city
+FROM first_ride fr
+JOIN requests req ON req.rider_id = fr.rider_id
+JOIN rides r ON r.request_id = req.request_id
+              AND r.started_at = fr.first_started_at
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id;
 ```
-
-No re-join needed — `ROW_NUMBER` picks one row per rider directly.
 
 ---
 count: false
@@ -220,15 +221,19 @@ count: false
 .small[
 
 ```sql
-WITH ranked AS (
-  SELECT req.rider_id, r.started_at, c.name AS city,
-         ROW_NUMBER() OVER (PARTITION BY req.rider_id ORDER BY r.started_at) AS rk
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
   FROM rides r
   JOIN requests req ON r.request_id = req.request_id
-  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  JOIN cities c ON n.city_id = c.city_id
+  GROUP BY req.rider_id
 )
-SELECT rider_id, started_at, city FROM ranked WHERE rk = 1 LIMIT 3;
+SELECT fr.rider_id, fr.first_started_at, c.name AS city
+FROM first_ride fr
+JOIN requests req ON req.rider_id = fr.rider_id
+JOIN rides r ON r.request_id = req.request_id AND r.started_at = fr.first_started_at
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+LIMIT 3;
 ```
 
 
@@ -236,14 +241,14 @@ SELECT rider_id, started_at, city FROM ranked WHERE rk = 1 LIMIT 3;
 
 Table: 3 records
 
-|rider_id |started_at                 |city    |
+|rider_id |first_started_at           |city    |
 |:--------|:--------------------------|:-------|
 |1        |2025-01-02 00:02:41.797299 |Seattle |
 |2        |2025-02-24 00:06:54.242272 |Chicago |
 |3        |2025-01-01 00:06:35.287335 |Seattle |
 ]
 
-This is a preview of Module 5's `ROW_NUMBER` pattern — the cleanest way to get "first/last/top per group."
+The CTE finds the extremum; the outer query re-joins to attach the rest of the row. In Module 5 you'll see `ROW_NUMBER` — a one-liner that replaces this whole pattern.
 
 ---
 
@@ -277,45 +282,37 @@ The pattern: each CTE is a step. Easy to test in isolation.
 
 ---
 
-# Q: Find riders who were active in each of the last 4 weeks of December.
+# Q: Find riders active in each of the last 4 weeks of December.
 
 &lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
-*Hint: collapse requests to rider × week, then `HAVING COUNT(DISTINCT week) &gt;= 4`.*
+*Hint: collapse to rider × week, then `HAVING COUNT(DISTINCT week) &gt;= 4`.*
 
 --
 
+.small[
 
 ```sql
 WITH active AS (
-  SELECT DISTINCT
-    rider_id,
-    strftime('%Y-%W', requested_at) AS week
-  FROM   requests
-  WHERE  date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+  SELECT DISTINCT rider_id, strftime('%Y-%W', requested_at) AS week
+  FROM requests
+  WHERE date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
 )
 SELECT rider_id, COUNT(DISTINCT week) AS weeks_active
-FROM   active
-GROUP BY rider_id
-HAVING COUNT(DISTINCT week) &gt;= 4
-LIMIT 5;
+FROM active GROUP BY rider_id
+HAVING COUNT(DISTINCT week) &gt;= 4 LIMIT 3;
 ```
 
 
 
 
-Table: 5 records
+Table: 3 records
 
 | rider_id| weeks_active|
 |--------:|------------:|
 |       11|            4|
 |       16|            5|
 |       58|            4|
-|      265|            4|
-|      344|            4|
-
---
-
-Trick: collapse each request to its week, then `HAVING COUNT(DISTINCT week) = N`.
+]
 
 ---
 
@@ -402,10 +399,10 @@ WHERE  rk &lt;= 3;                                     -- top 3 per driver
 &lt;a href="../module-01/slides.html#schema" style="font-size:13px;background:#f0f8ff;border:1px solid #aac;border-radius:4px;padding:2px 8px;text-decoration:none;color:#336;"&gt;Schema ref&lt;/a&gt;
 
 &lt;table&gt;
-&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Ref&lt;/th&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Sample Code&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;M1&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html"&gt;JOINs&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-02/slides.html#sample"&gt;M2&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html"&gt;GROUP BY, HAVING, Conversion Funnels&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-03/slides.html#sample"&gt;M3&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;b&gt;5&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;Window Functions&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
