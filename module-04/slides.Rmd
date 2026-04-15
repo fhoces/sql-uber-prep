@@ -77,6 +77,8 @@ The database engine converts both into the same internal strategy (called an "ex
 SELECT * FROM rides WHERE fare_usd > (SELECT AVG(fare_usd) FROM rides);
 ```
 
+The inner `(SELECT AVG(...) FROM rides)` runs first, returns one number (e.g. 12.03), then the outer query uses it: `WHERE fare_usd > 12.03`. In R: `filter(fare_usd > mean(fare_usd))` — SQL can't use `mean()` inline, so you wrap it in a subquery.
+
 --
 
 **Table:** returns a table, used in `FROM`.
