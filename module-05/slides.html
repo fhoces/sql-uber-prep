@@ -39,6 +39,7 @@ class: center, middle, inverse, title-slide
   z-index: 100;
 }
 .write-ref:hover { background: #ddeeff; text-decoration: none; }
+.sample-code .remark-code { font-size: 95%; line-height: 1.4; }
 .small { font-size: 80%; }
 &lt;/style&gt;
 
@@ -360,6 +361,60 @@ class: inverse
 &lt;br&gt;
 
 ### 3. ROW_NUMBER + filter inside a CTE is the canonical "top-N per group" idiom. Memorize it.
+
+---
+class: sample-code
+
+# Sample Code — Module 5
+
+```sql
+-- RANK + LAG + rolling AVG + NTILE (all window function families)
+WITH daily AS (
+  SELECT driver_id, date(started_at) AS day,
+         COUNT(*) AS n_rides, SUM(fare_usd) AS revenue
+  FROM rides GROUP BY driver_id, day
+)
+SELECT driver_id, day, n_rides, revenue,
+  RANK() OVER (PARTITION BY driver_id
+               ORDER BY revenue DESC)           AS revenue_rank,
+  LAG(revenue) OVER (PARTITION BY driver_id
+                     ORDER BY day)              AS prev_day_rev,
+  ROUND(AVG(revenue) OVER (PARTITION BY driver_id
+    ORDER BY day ROWS BETWEEN 6 PRECEDING
+    AND CURRENT ROW), 2)                        AS rolling_7d_avg,
+  NTILE(4) OVER (ORDER BY revenue DESC)         AS quartile
+FROM daily
+LIMIT 10;
+```
+
+---
+class: sample-code
+
+# Sample Code — Full Course
+
+```sql
+-- M1: SELECT/WHERE/aggregates  M2: JOINs  M3: GROUP BY/CTE
+-- M4: subqueries/CTEs          M5: window functions
+WITH city_stats AS (                              -- CTE (M4)
+  SELECT c.name AS city,
+    COUNT(*) AS n_rides,                          -- aggregate (M1)
+    ROUND(AVG(r.fare_usd), 2) AS avg_fare,
+    SUM(CASE WHEN r.surge_mult &gt; 1               -- CASE WHEN (M3)
+        THEN 1 ELSE 0 END) AS n_surged
+  FROM rides r
+  JOIN requests req ON r.request_id = req.request_id  -- JOIN (M2)
+  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+  JOIN cities c ON n.city_id = c.city_id
+  WHERE date(r.started_at) &gt;= '2025-06-01'       -- WHERE (M1)
+  GROUP BY c.name                                 -- GROUP BY (M3)
+  HAVING COUNT(*) &gt; 500                           -- HAVING (M3)
+)
+SELECT city, n_rides, avg_fare, n_surged,
+  RANK() OVER (ORDER BY avg_fare DESC) AS fare_rank,  -- window (M5)
+  ROUND(1.0 * n_surged / n_rides, 3)  AS surge_pct
+FROM city_stats
+ORDER BY fare_rank;
+```
 
 ---
 

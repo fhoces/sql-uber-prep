@@ -29,6 +29,7 @@ output:
   z-index: 100;
 }
 .write-ref:hover { background: #ddeeff; text-decoration: none; }
+.sample-code .remark-code { font-size: 95%; line-height: 1.4; }
 .small { font-size: 80%; }
 ```
 
@@ -408,6 +409,28 @@ class: inverse
 <br>
 
 ### 3. Watch out for integer division, NULL handling, and column aliases in WHERE.
+
+---
+class: sample-code
+
+# Sample Code
+
+```sql
+-- SELECT + WHERE + aggregates + GROUP BY + HAVING + ORDER BY + LIMIT
+SELECT
+  strftime('%Y-%m', started_at)                        AS month,
+  COUNT(*)                                             AS n_rides,
+  COUNT(DISTINCT driver_id)                            AS n_drivers,
+  ROUND(AVG(fare_usd), 2)                             AS avg_fare,
+  ROUND(1.0 * SUM(CASE WHEN surge_mult > 1 THEN 1
+                        ELSE 0 END) / COUNT(*), 3)    AS pct_surged
+FROM   rides
+WHERE  date(started_at) BETWEEN '2025-01-01' AND '2025-12-31'
+GROUP BY month
+HAVING COUNT(*) > 100
+ORDER BY month
+LIMIT 12;
+```
 
 ---
 

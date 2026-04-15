@@ -29,6 +29,7 @@ output:
   z-index: 100;
 }
 .write-ref:hover { background: #ddeeff; text-decoration: none; }
+.sample-code .remark-code { font-size: 95%; line-height: 1.4; }
 .small { font-size: 80%; }
 ```
 
@@ -334,6 +335,32 @@ class: inverse
 <br>
 
 ### 3. Module 5 (window functions) replaces many of these patterns with one-liners — but the CTE approach works in any dialect.
+
+---
+class: sample-code
+
+# Sample Code
+
+```sql
+-- Scalar subquery + table subquery + CTE chain + first-per-group
+WITH high_earners AS (                              -- CTE 1
+  SELECT driver_id, SUM(fare_usd) AS total
+  FROM rides GROUP BY driver_id
+  HAVING SUM(fare_usd) > (SELECT AVG(fare_usd)     -- scalar subquery
+                           * 100 FROM rides)
+),
+ranked AS (                                         -- CTE 2
+  SELECT h.driver_id, r.ride_id, r.fare_usd,
+         r.started_at,
+         ROW_NUMBER() OVER (PARTITION BY h.driver_id
+                            ORDER BY r.fare_usd DESC) AS rk
+  FROM high_earners h
+  JOIN rides r ON h.driver_id = r.driver_id
+)
+SELECT driver_id, ride_id, fare_usd, started_at
+FROM   ranked
+WHERE  rk <= 3;                                     -- top 3 per driver
+```
 
 ---
 

@@ -39,6 +39,7 @@ class: center, middle, inverse, title-slide
   z-index: 100;
 }
 .write-ref:hover { background: #ddeeff; text-decoration: none; }
+.sample-code .remark-code { font-size: 95%; line-height: 1.4; }
 .small { font-size: 80%; }
 .two-col { display: flex; align-items: flex-start; gap: 2em; }
 .col-narrow { flex: 1; }
@@ -505,6 +506,28 @@ class: inverse
 &lt;br&gt;
 
 ### 3. Build multi-table joins one step at a time. Don't try to write 5-table joins from scratch.
+
+---
+class: sample-code
+
+# Sample Code
+
+```sql
+-- INNER JOIN + LEFT JOIN + anti-join + multi-table chain
+SELECT c.name AS city, d.gender,
+       COUNT(*)                    AS n_rides,
+       COUNT(DISTINCT req.rider_id) AS n_riders
+FROM   rides r
+JOIN   drivers d    ON r.driver_id = d.driver_id          -- inner
+JOIN   requests req ON r.request_id = req.request_id      -- inner
+JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id  -- chain
+JOIN   cities c     ON n.city_id = c.city_id               -- chain
+WHERE  d.driver_id NOT IN (                                -- anti-join
+         SELECT driver_id FROM rides
+         WHERE  fare_usd &lt; 5)
+GROUP BY c.name, d.gender
+ORDER BY c.name, n_rides DESC;
+```
 
 ---
 
