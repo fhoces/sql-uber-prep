@@ -288,7 +288,7 @@ funnel AS (
 SELECT * FROM funnel;
 ```
 
-The pattern: each CTE is a step. Easy to test in isolation.
+Why `ride_id IS NOT NULL`? After a LEFT JOIN, unmatched rows get NULLs in the right-side columns. So `ride_id IS NULL` = the request was never completed. Counting non-NULLs = completed rides.
 
 ---
 
