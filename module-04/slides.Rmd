@@ -267,22 +267,18 @@ The pattern: each CTE is a step. Easy to test in isolation.
 
 --
 
+.small[
 ```{sql active-n, eval=TRUE}
 WITH active AS (
-  SELECT DISTINCT
-    rider_id,
-    strftime('%Y-%W', requested_at) AS week
-  FROM   requests
-  WHERE  date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
+  SELECT DISTINCT rider_id, strftime('%Y-%W', requested_at) AS week
+  FROM requests
+  WHERE date(requested_at) BETWEEN '2025-12-01' AND '2025-12-31'
 )
 SELECT rider_id, COUNT(DISTINCT week) AS weeks_active
-FROM   active
-GROUP BY rider_id
-HAVING COUNT(DISTINCT week) >= 4
-LIMIT 5;
+FROM active GROUP BY rider_id
+HAVING COUNT(DISTINCT week) >= 4 LIMIT 3;
 ```
-
---
+]
 
 Trick: collapse each request to its week, then `HAVING COUNT(DISTINCT week) = N`.
 
