@@ -118,7 +118,27 @@ FROM   drivers d;
 
 --
 
-For each row in `drivers`, the inner query counts that driver's rides. Like running a separate `filter + nrow` for every single driver — works, but expensive on large tables. Usually better to use a JOIN + GROUP BY instead.
+What happens under the hood — the database loops through drivers one by one:
+
+```
+driver 1 → SELECT COUNT(*) FROM rides WHERE driver_id = 1  → 47
+driver 2 → SELECT COUNT(*) FROM rides WHERE driver_id = 2  → 112
+driver 3 → SELECT COUNT(*) FROM rides WHERE driver_id = 3  → 0
+...        (800 separate queries, one per driver)
+```
+
+--
+
+The **faster way** — JOIN + GROUP BY does it in one pass:
+
+```sql
+SELECT d.driver_id, d.gender, COUNT(r.ride_id) AS n_rides
+FROM   drivers d
+LEFT JOIN rides r ON d.driver_id = r.driver_id
+GROUP BY d.driver_id, d.gender;
+```
+
+Same result, but the database scans `rides` once instead of 800 times.
 
 ---
 
