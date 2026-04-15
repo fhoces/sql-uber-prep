@@ -475,8 +475,9 @@ class: sample-code
 name: sample
 # Sample Code: Cohort Retention with Accept Rates
 
+.small[Dashboard + compare-to-global + funnel + cohort (all 4 patterns)]
+
 ```sql
--- Dashboard + compare-to-global + funnel + cohort (all 4 patterns)
 WITH cohort AS (
   SELECT rider_id, strftime('%Y-%m', signup_date) AS cohort_month FROM riders
 ),
@@ -490,9 +491,7 @@ SELECT c.cohort_month, a.month,
   COUNT(DISTINCT c.rider_id) AS active_riders,
   ROUND(1.0 * SUM(a.n_accepted) / SUM(a.n_requests), 3) AS avg_accept_rate
 FROM cohort c JOIN monthly_activity a ON c.rider_id = a.rider_id
-GROUP BY c.cohort_month, a.month
-HAVING COUNT(DISTINCT c.rider_id) &gt; 10
-ORDER BY c.cohort_month, a.month;
+GROUP BY c.cohort_month, a.month;
 ```
 
 ---
