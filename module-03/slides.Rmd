@@ -298,9 +298,9 @@ Read each column as: "of all the rows, how many passed this filter?" The numbers
 
 <a class="write-ref" href="#write-order">WO</a>
 
-A **CTE** (Common Table Expression) lets you name a temporary result. Read `WITH cohort AS (...)` as **"let `cohort` = the result of this query"** — like `cohort <- riders |> ...` in R. Multiple CTEs are separated by commas. It only exists for this one query. (Covered fully in Module 4.)
+A **CTE** lets you name a temporary result. Read `WITH cohort AS (...)` as **"let `cohort` = this query"** — like `cohort <- riders |> ...` in R. (Covered fully in Module 4.)
 
-**Step 1.** Build a CTE for each rider's cohort (their signup month):
+**Step 1.** CTE for each rider's cohort (signup month):
 
 ```sql
 WITH cohort AS (
@@ -311,7 +311,7 @@ WITH cohort AS (
 
 --
 
-**Step 2.** Build a CTE for each rider's activity months:
+**Step 2.** CTE for each rider's activity months (comma-separated from Step 1):
 
 ```sql
 activity AS (
@@ -320,9 +320,14 @@ activity AS (
 )
 ```
 
---
+---
+count: false
 
-**Step 3.** Join them and count distinct riders per (cohort, activity month):
+# Q: Cohort retention — Step 3
+
+<a class="write-ref" href="#write-order">WO</a>
+
+**Step 3.** Join the two CTEs and count distinct riders per (cohort, month):
 
 ```sql
 SELECT c.cohort_month, a.activity_month,
