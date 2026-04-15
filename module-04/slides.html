@@ -369,17 +369,63 @@ In modern SQL, **default to CTEs**.
 
 ---
 
-# Common Mistakes
+# Common Mistakes (1/3): Forgetting to JOIN back
 
-**1.** Forgetting to JOIN back to the original after a CTE. The CTE has the rider_id and date, but you also wanted the city — you need a second join.
+The CTE has `rider_id` and `first_started_at`, but you also wanted the city — you need a second join.
+
+.small[
+**Wrong** — city isn't in the CTE:
+```sql
+WITH first_ride AS (
+  SELECT rider_id, MIN(started_at) AS first_started_at
+  FROM rides r JOIN requests req ON r.request_id = req.request_id
+  GROUP BY rider_id
+)
+SELECT rider_id, first_started_at, city FROM first_ride;  -- ERROR: no column "city"
+```
+]
 
 --
 
-**2.** CTEs that aren't materialized. In Postgres &lt; v12 they were materialized; after, they're inlined. SQLite inlines them. Don't expect a CTE to act as a memoization cache.
+.small[
+**Right** — re-join to get the city:
+```sql
+SELECT fr.rider_id, fr.first_started_at, c.name AS city
+FROM first_ride fr
+JOIN requests req ON req.rider_id = fr.rider_id
+JOIN rides r ON r.request_id = req.request_id AND r.started_at = fr.first_started_at
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id;
+```
+]
+
+---
+
+# Common Mistakes (2/3): Naming collisions
+
+`WITH rides AS (...)` shadows the real `rides` table — the outer query can no longer see it.
+
+.small[
+**Wrong** — CTE name collides with the table:
+```sql
+WITH rides AS (
+  SELECT driver_id, COUNT(*) AS n FROM rides GROUP BY driver_id
+)
+SELECT * FROM rides r JOIN rides orig ON ...;  -- "rides" is the CTE, not the table!
+```
+]
 
 --
 
-**3.** Naming collisions. `WITH rides AS (...)` shadows the real `rides` table. Be careful.
+.small[
+**Right** — use a distinct name:
+```sql
+WITH driver_rides AS (
+  SELECT driver_id, COUNT(*) AS n FROM rides GROUP BY driver_id
+)
+SELECT * FROM driver_rides dr JOIN rides r ON ...;  -- no ambiguity
+```
+]
 
 ---
 class: inverse
