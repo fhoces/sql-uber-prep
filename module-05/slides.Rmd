@@ -332,26 +332,25 @@ class: sample-code
 name: sample-full
 # Sample Code: City Dashboard (All Modules Combined)
 
+.small[M1: SELECT/WHERE/aggregates — M2: JOINs — M3: GROUP BY/CASE WHEN — M4: CTEs — M5: window]
+
 ```sql
--- M1: SELECT/WHERE/aggregates  M2: JOINs  M3: GROUP BY/CTE
--- M4: subqueries/CTEs          M5: window functions
-WITH city_stats AS (                              -- CTE (M4)
-  SELECT c.name AS city,
-    COUNT(*) AS n_rides,                          -- aggregate (M1)
+WITH city_stats AS (
+  SELECT c.name AS city, COUNT(*) AS n_rides,
     ROUND(AVG(r.fare_usd), 2) AS avg_fare,
-    SUM(CASE WHEN r.surge_mult > 1               -- CASE WHEN (M3)
+    SUM(CASE WHEN r.surge_mult > 1
         THEN 1 ELSE 0 END) AS n_surged
   FROM rides r
-  JOIN requests req ON r.request_id = req.request_id  -- JOIN (M2)
+  JOIN requests req ON r.request_id = req.request_id
   JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
   JOIN cities c ON n.city_id = c.city_id
-  WHERE date(r.started_at) >= '2025-06-01'       -- WHERE (M1)
-  GROUP BY c.name                                 -- GROUP BY (M3)
-  HAVING COUNT(*) > 500                           -- HAVING (M3)
+  WHERE date(r.started_at) >= '2025-06-01'
+  GROUP BY c.name
+  HAVING COUNT(*) > 500
 )
 SELECT city, n_rides, avg_fare, n_surged,
-  RANK() OVER (ORDER BY avg_fare DESC) AS fare_rank,  -- window (M5)
-  ROUND(1.0 * n_surged / n_rides, 3)  AS surge_pct
+  RANK() OVER (ORDER BY avg_fare DESC) AS fare_rank,
+  ROUND(1.0 * n_surged / n_rides, 3) AS surge_pct
 FROM city_stats
 ORDER BY fare_rank;
 ```
