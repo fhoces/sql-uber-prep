@@ -159,39 +159,67 @@ Each CTE = one logical step. Read top-to-bottom like a script.
 # Q: For each rider, find the date of their first ride and the city it was in.
 
 &lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
+
 *Hint: CTE to find `MIN(started_at)` per rider, then JOIN back to get the city.*
 
 --
 
+**Step 1.** CTE finds each rider's earliest ride:
 
 ```sql
 WITH first_ride AS (
   SELECT req.rider_id, MIN(r.started_at) AS first_started_at
-  FROM   rides r
-  JOIN   requests req ON r.request_id = req.request_id
+  FROM rides r JOIN requests req ON r.request_id = req.request_id
+  GROUP BY req.rider_id
+)
+```
+
+--
+
+**Step 2.** JOIN back to get the city for that specific ride:
+
+```sql
+SELECT fr.rider_id, fr.first_started_at, c.name AS first_city
+FROM first_ride fr
+JOIN rides r ON r.started_at = fr.first_started_at
+JOIN requests req ON ... JOIN neighborhoods n ON ... JOIN cities c ON ...
+```
+
+---
+count: false
+
+# Q: First ride per rider — full query + result
+
+&lt;a class="write-ref" href="../module-03/slides.html#write-order"&gt;WO&lt;/a&gt;
+
+.small[
+
+```sql
+WITH first_ride AS (
+  SELECT req.rider_id, MIN(r.started_at) AS first_started_at
+  FROM rides r JOIN requests req ON r.request_id = req.request_id
   GROUP BY req.rider_id
 )
 SELECT fr.rider_id, fr.first_started_at, c.name AS first_city
-FROM   first_ride fr
-JOIN   rides r ON r.started_at = fr.first_started_at
-JOIN   requests req ON r.request_id = req.request_id
-JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-JOIN   cities c ON n.city_id = c.city_id
-LIMIT 5;
+FROM first_ride fr
+JOIN rides r ON r.started_at = fr.first_started_at
+JOIN requests req ON r.request_id = req.request_id
+JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
+JOIN cities c ON n.city_id = c.city_id
+LIMIT 3;
 ```
 
 
 
 
-Table: 5 records
+Table: 3 records
 
-|rider_id |first_started_at           |first_city    |
-|:--------|:--------------------------|:-------------|
-|1        |2025-01-02 00:02:41.797299 |Seattle       |
-|2        |2025-02-24 00:06:54.242272 |Chicago       |
-|3        |2025-01-01 00:06:35.287335 |Seattle       |
-|4        |2025-01-14 00:07:28.482105 |Austin        |
-|5        |2025-01-13 00:02:14.530504 |San Francisco |
+|rider_id |first_started_at           |first_city |
+|:--------|:--------------------------|:----------|
+|1        |2025-01-02 00:02:41.797299 |Seattle    |
+|2        |2025-02-24 00:06:54.242272 |Chicago    |
+|3        |2025-01-01 00:06:35.287335 |Seattle    |
+]
 
 ---
 
