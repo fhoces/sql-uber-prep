@@ -303,6 +303,7 @@ Table: 0 records
 The `WHERE r.ride_id IS NULL` keeps only drivers whose LEFT JOIN produced no match — i.e., drivers with zero rides. That's the anti-join.
 
 ---
+name: self-join
 
 # Self-Join: "Compare to another row of the same table"
 
@@ -354,6 +355,7 @@ Then `MAX(r2.started_at)` after `GROUP BY r1.ride_id` picks the **most recent** 
 **Window-function alternative** (Module 5): `LAG(started_at) OVER (PARTITION BY driver_id ORDER BY started_at)` does the same thing in one expression — cheaper and clearer. Self-join is the *pre*-window-function pattern; it still shows up in interviews because not every dialect/version has window functions.
 
 ---
+name: multi-chain
 
 # Pattern: Multi-table chain
 

@@ -202,6 +202,7 @@ LIMIT 7;
 `ROWS BETWEEN 6 PRECEDING AND CURRENT ROW` = 7-row window. Pre-aggregate to one row per day so the row count = day count.
 
 ---
+name: median-main
 
 # Q: What's the median fare per driver?
 
@@ -224,6 +225,7 @@ GROUP BY driver_id;
 For other percentiles: `PERCENTILE_CONT(0.9)` for 90th, `PERCENTILE_CONT(0.25)` for Q1, etc.
 
 ---
+name: median-sqlite
 
 # Q: Median in SQLite — the `ROW_NUMBER` workaround
 
