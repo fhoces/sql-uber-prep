@@ -48,6 +48,10 @@ rides          (ride_id, request_id, driver_id, started_at, ended_at,
                 distance_mi, fare_usd, surge_mult, rider_rating)
 ```
 
+## Cheat sheet
+
+One-page landscape reference card covering all five modules — execution-order palette, JOIN patterns, GROUP BY / aggregates, subqueries & CTEs, window functions, plus an all-modules capstone query: **[sql-cheatsheet.pdf](sql-cheatsheet.pdf)** ([LaTeX source](sql-cheatsheet.tex)).
+
 ## Modules
 
 | # | Module | Topics | Sample interview questions |
