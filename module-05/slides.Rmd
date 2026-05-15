@@ -203,6 +203,61 @@ LIMIT 7;
 
 ---
 
+# Q: What's the median fare per driver?
+
+<a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
+*Hint: median = middle row when sorted. Standard SQL has `PERCENTILE_CONT(0.5)`; SQLite doesn't, so we'll need a workaround (next slide).*
+
+--
+
+**Standard SQL** (Postgres / MySQL 8+ / Snowflake — *not* SQLite):
+
+```sql
+SELECT driver_id,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY fare_usd) AS median_fare
+FROM   rides
+GROUP BY driver_id;
+```
+
+`WITHIN GROUP (ORDER BY ...)` is **ordered-set aggregate** syntax — the ordering is local to each `GROUP BY` partition. No `OVER (PARTITION BY ...)` needed.
+
+For other percentiles: `PERCENTILE_CONT(0.9)` for 90th, `PERCENTILE_CONT(0.25)` for Q1, etc.
+
+---
+
+# Q: Median in SQLite — the `ROW_NUMBER` workaround
+
+<a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
+*Hint: order each driver's rides, pick the middle row(s) by `ROW_NUMBER()`.*
+
+--
+
+```{sql median-sqlite, eval=TRUE}
+WITH ranked AS (
+  SELECT driver_id, fare_usd,
+         ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY fare_usd) AS rn,
+         COUNT(*)    OVER (PARTITION BY driver_id)                    AS n
+  FROM rides
+)
+SELECT driver_id, ROUND(AVG(fare_usd), 2) AS median_fare
+FROM   ranked
+WHERE  rn IN ((n+1)/2, (n+2)/2)   -- one row if n odd, two rows if even
+GROUP BY driver_id
+ORDER BY driver_id
+LIMIT 5;
+```
+
+--
+
+**Why the trick works** (integer division):
+
+- **Odd** `n=5`: `(5+1)/2 = 3`, `(5+2)/2 = 3` → one row matches (`rn=3`), the middle.
+- **Even** `n=6`: `(6+1)/2 = 3`, `(6+2)/2 = 4` → two rows; `AVG` returns the conventional median.
+
+**Other percentiles:** change the rank cutoff. 90th: `rn = CEIL(n * 0.9)`. Shorter approximations: `NTILE(2)` → keep ntile = 1 (floor median).
+
+---
+
 # Q: Find drivers in the bottom 10% of their city by acceptance rate.
 
 <a class="write-ref" href="../module-03/slides.html#write-order">WO</a>
@@ -335,24 +390,24 @@ name: sample-full
 .small[M1: SELECT/WHERE/aggregates — M2: JOINs — M3: GROUP BY/CASE WHEN — M4: CTEs — M5: window]
 
 ```sql
-WITH city_stats AS (
-  SELECT c.name AS city, COUNT(*) AS n_rides,
-    ROUND(AVG(r.fare_usd), 2) AS avg_fare,
-    SUM(CASE WHEN r.surge_mult > 1
-        THEN 1 ELSE 0 END) AS n_surged
-  FROM rides r
-  JOIN requests req ON r.request_id = req.request_id
-  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-  JOIN cities c ON n.city_id = c.city_id
-  WHERE date(r.started_at) >= '2025-06-01'
-  GROUP BY c.name
-  HAVING COUNT(*) > 500
+WITH city_stats AS (                                       -- M4: CTE wraps the prep
+  SELECT c.name AS city, COUNT(*) AS n_rides,              -- M1: project + COUNT
+    ROUND(AVG(r.fare_usd), 2) AS avg_fare,                 -- M1: AVG aggregate
+    SUM(CASE WHEN r.surge_mult > 1                         -- M3: conditional count
+        THEN 1 ELSE 0 END) AS n_surged                     --     via CASE WHEN
+  FROM rides r                                             -- M2: alias rides
+  JOIN requests req ON r.request_id = req.request_id       -- M2: chain hop 1
+  JOIN neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id   -- M2: chain hop 2
+  JOIN cities c ON n.city_id = c.city_id                   -- M2: chain hop 3
+  WHERE date(r.started_at) >= '2025-06-01'                 -- M1: pre-agg filter
+  GROUP BY c.name                                          -- M3: 1 row per city
+  HAVING COUNT(*) > 500                                    -- M3: post-agg filter
 )
-SELECT city, n_rides, avg_fare, n_surged,
-  RANK() OVER (ORDER BY avg_fare DESC) AS fare_rank,
-  ROUND(1.0 * n_surged / n_rides, 3) AS surge_pct
-FROM city_stats
-ORDER BY fare_rank;
+SELECT city, n_rides, avg_fare, n_surged,                  -- pick CTE columns
+  RANK() OVER (ORDER BY avg_fare DESC) AS fare_rank,       -- M5: window rank
+  ROUND(1.0 * n_surged / n_rides, 3) AS surge_pct          -- M1: rate (1.0* = float div)
+FROM city_stats                                            -- read the CTE
+ORDER BY fare_rank;                                        -- final sort
 ```
 
 ---

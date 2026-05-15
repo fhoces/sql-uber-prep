@@ -124,7 +124,7 @@ count: false
 ```{sql inner, eval=TRUE}
 SELECT r.ride_id, r.driver_id, d.gender, r.fare_usd
 FROM   rides r
-JOIN   drivers d ON r.driver_id = d.driver_id
+JOIN   drivers d ON r.driver_id = d.driver_id  -- swap to "LEFT JOIN" and rides with no matching driver stay (NULL gender)
 LIMIT 5;
 ```
 
@@ -167,7 +167,7 @@ count: false
 ```{sql left-join, eval=TRUE}
 SELECT req.request_id, req.accepted, r.fare_usd
 FROM   requests req
-LEFT JOIN rides r ON req.request_id = r.request_id
+LEFT JOIN rides r ON req.request_id = r.request_id  -- swap to "JOIN" (no LEFT) and rejected requests disappear
 LIMIT 5;
 ```
 
@@ -206,12 +206,76 @@ The `WHERE r.ride_id IS NULL` keeps only drivers whose LEFT JOIN produced no mat
 
 ---
 
-# Pattern: Multi-table chain
+# Self-Join: "Compare to another row of the same table"
 
-When the column you want lives several tables away, you **chain** joins. Here we want the city *name* (in `cities`) for each ride (in `rides`), but they're linked through `requests` → `neighborhoods` → `cities`.
+**Q:** For each ride, what was the driver's *previous* ride?
+**A:** Join `rides` against itself, with a time inequality, then keep the most-recent earlier match.
+
+<pre style="background:#f5f5f5;padding:0.6em 0.9em;border-radius:4px;font-family:'Source Code Pro',Menlo,monospace;font-size:85%;line-height:1.4;margin:0;">
+<span style="color:#ff7f00;"><b>③ SELECT</b> r1.ride_id, r1.driver_id, r1.started_at,
+         <b>MAX</b>(r2.started_at) <b>AS</b> previous_ride</span>
+<span style="color:#1f78b4;"><b>① FROM</b>   rides r1
+    <b>LEFT JOIN</b> rides r2 <b>ON</b> r1.driver_id  = r2.driver_id
+                    <b>AND</b> r2.started_at &lt; r1.started_at</span>
+<span style="color:#33a02c;"><b>② GROUP BY</b> r1.ride_id</span>
+<span style="color:#e31a1c;"><b>④ LIMIT</b> 5;</span>
+</pre>
 
 .small[
-```{sql multi, eval=TRUE}
+```{sql self-join, eval=TRUE, echo=FALSE}
+SELECT r1.ride_id, r1.driver_id, r1.started_at,
+       MAX(r2.started_at) AS previous_ride
+FROM   rides r1
+LEFT JOIN rides r2
+  ON   r1.driver_id = r2.driver_id
+  AND  r2.started_at < r1.started_at
+GROUP BY r1.ride_id
+LIMIT 5;
+```
+]
+
+---
+count: false
+
+# Self-Join: reading the aliases
+
+`r1` and `r2` are **two copies of the same table**, joined together. Treat them as two separate tables that just happen to share rows.
+
+| Alias | Role |
+|---|---|
+| `r1` | the **anchor** ride — the row we're computing "previous" for |
+| `r2` | a **candidate** previous ride — any earlier ride by the same driver |
+
+The two `ON` conditions narrow `r2` to *eligible* matches:
+
+1. `r1.driver_id = r2.driver_id` — same driver
+2. `r2.started_at < r1.started_at` — earlier in time
+
+Then `MAX(r2.started_at)` after `GROUP BY r1.ride_id` picks the **most recent** of those earlier rides — the immediate predecessor. A driver's *first* ride has no eligible `r2`, so `previous_ride` is `NULL` (LEFT JOIN preserves it).
+
+**Window-function alternative** (Module 5): `LAG(started_at) OVER (PARTITION BY driver_id ORDER BY started_at)` does the same thing in one expression — cheaper and clearer. Self-join is the *pre*-window-function pattern; it still shows up in interviews because not every dialect/version has window functions.
+
+---
+
+# Pattern: Multi-table chain
+
+**Q:** I need a column that lives several joins away. How do I get it?
+**A:** Chain joins one hop at a time. Numerals = hop order.
+
+<pre style="background:#f5f5f5;padding:0.6em 0.9em;border-radius:4px;font-family:'Source Code Pro',Menlo,monospace;font-size:90%;line-height:1.4;margin:0;">
+<span style="color:#ff7f00;"><b>③ SELECT</b> c.name <b>AS</b> city,
+         <b>COUNT</b>(*) <b>AS</b> n_rides,
+         <b>ROUND</b>(<b>AVG</b>(r.fare_usd), 2) <b>AS</b> avg_fare</span>
+<span style="color:#1f78b4;"><b>① FROM</b>   rides r
+    <b>JOIN</b>   requests      req <b>ON</b> r.request_id       = req.request_id
+    <b>JOIN</b>   neighborhoods n   <b>ON</b> req.pickup_nbhd_id = n.nbhd_id
+    <b>JOIN</b>   cities        c   <b>ON</b> n.city_id          = c.city_id</span>
+<span style="color:#33a02c;"><b>② GROUP BY</b> c.name</span>
+<span style="color:#e31a1c;"><b>④ ORDER BY</b> n_rides <b>DESC</b>;</span>
+</pre>
+
+.small[
+```{sql multi, eval=TRUE, echo=FALSE}
 SELECT c.name AS city,
        COUNT(*) AS n_rides,
        ROUND(AVG(r.fare_usd), 2) AS avg_fare

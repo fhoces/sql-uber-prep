@@ -178,21 +178,21 @@ The linking columns (e.g. `driver_id` appears in both `rides` and `drivers`) are
 
 # The Core Syntax
 
-```sql
-SELECT col1, col2, agg_func(col3) AS result_name
-FROM   table_name
-WHERE  some_condition
-GROUP BY col1, col2
-HAVING aggregate_condition
-ORDER BY col1 DESC
-LIMIT 10;
-```
+&lt;pre style="background:#f5f5f5;padding:0.9em 1em;border-radius:4px;font-family:'Source Code Pro',Menlo,monospace;line-height:1.55;font-size:90%;margin:0;"&gt;
+&lt;span style="color:#6a3d9a;"&gt;&lt;b&gt;⑤ SELECT&lt;/b&gt; col1, col2, agg_func(col3) &lt;b&gt;AS&lt;/b&gt; result_name&lt;/span&gt;
+&lt;span style="color:#1f78b4;"&gt;&lt;b&gt;① FROM&lt;/b&gt;   table_name&lt;/span&gt;
+&lt;span style="color:#33a02c;"&gt;&lt;b&gt;② WHERE&lt;/b&gt;  some_condition&lt;/span&gt;
+&lt;span style="color:#ff7f00;"&gt;&lt;b&gt;③ GROUP BY&lt;/b&gt; col1, col2&lt;/span&gt;
+&lt;span style="color:#e31a1c;"&gt;&lt;b&gt;④ HAVING&lt;/b&gt; aggregate_condition&lt;/span&gt;
+&lt;span style="color:#b15928;"&gt;&lt;b&gt;⑥ ORDER BY&lt;/b&gt; col1 DESC&lt;/span&gt;
+&lt;span style="color:#555;"&gt;&lt;b&gt;⑦ LIMIT&lt;/b&gt; 10;&lt;/span&gt;
+&lt;/pre&gt;
 
 --
 
-**Logical execution order** (different from written order):
+**Logical execution order** (different from written order — numbers ①–⑦ above match):
 
-`FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` → `LIMIT`
+&lt;span style="color:#1f78b4;"&gt;&lt;b&gt;① FROM&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#33a02c;"&gt;&lt;b&gt;② WHERE&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#ff7f00;"&gt;&lt;b&gt;③ GROUP BY&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#e31a1c;"&gt;&lt;b&gt;④ HAVING&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#6a3d9a;"&gt;&lt;b&gt;⑤ SELECT&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#b15928;"&gt;&lt;b&gt;⑥ ORDER BY&lt;/b&gt;&lt;/span&gt; → &lt;span style="color:#555;"&gt;&lt;b&gt;⑦ LIMIT&lt;/b&gt;&lt;/span&gt;
 
 --
 

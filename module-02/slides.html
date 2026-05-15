@@ -51,9 +51,9 @@ class: center, middle, inverse, title-slide
 # Course Map
 
 &lt;table&gt;
-&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Ref&lt;/th&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;JOINs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;td&gt;&lt;a href="#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Sample Code&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;M1&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;JOINs&lt;/b&gt; &lt;i&gt;(you are here)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;← current&lt;/td&gt;&lt;td&gt;&lt;a href="#sample"&gt;M2&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;GROUP BY, HAVING, Conversion Funnels&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Window Functions&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
@@ -158,7 +158,7 @@ count: false
 ```sql
 SELECT r.ride_id, r.driver_id, d.gender, r.fare_usd
 FROM   rides r
-JOIN   drivers d ON r.driver_id = d.driver_id
+JOIN   drivers d ON r.driver_id = d.driver_id  -- swap to "LEFT JOIN" and rides with no matching driver stay (NULL gender)
 LIMIT 5;
 ```
 
@@ -243,7 +243,7 @@ count: false
 ```sql
 SELECT req.request_id, req.accepted, r.fare_usd
 FROM   requests req
-LEFT JOIN rides r ON req.request_id = r.request_id
+LEFT JOIN rides r ON req.request_id = r.request_id  -- swap to "JOIN" (no LEFT) and rejected requests disappear
 LIMIT 5;
 ```
 
@@ -304,26 +304,75 @@ The `WHERE r.ride_id IS NULL` keeps only drivers whose LEFT JOIN produced no mat
 
 ---
 
-# Pattern: Multi-table chain
+# Self-Join: "Compare to another row of the same table"
 
-When the column you want lives several tables away, you **chain** joins. Here we want the city *name* (in `cities`) for each ride (in `rides`), but they're linked through `requests` → `neighborhoods` → `cities`.
+**Q:** For each ride, what was the driver's *previous* ride?
+**A:** Join `rides` against itself, with a time inequality, then keep the most-recent earlier match.
+
+&lt;pre style="background:#f5f5f5;padding:0.6em 0.9em;border-radius:4px;font-family:'Source Code Pro',Menlo,monospace;font-size:85%;line-height:1.4;margin:0;"&gt;
+&lt;span style="color:#ff7f00;"&gt;&lt;b&gt;③ SELECT&lt;/b&gt; r1.ride_id, r1.driver_id, r1.started_at,
+         &lt;b&gt;MAX&lt;/b&gt;(r2.started_at) &lt;b&gt;AS&lt;/b&gt; previous_ride&lt;/span&gt;
+&lt;span style="color:#1f78b4;"&gt;&lt;b&gt;① FROM&lt;/b&gt;   rides r1
+    &lt;b&gt;LEFT JOIN&lt;/b&gt; rides r2 &lt;b&gt;ON&lt;/b&gt; r1.driver_id  = r2.driver_id
+                    &lt;b&gt;AND&lt;/b&gt; r2.started_at &amp;lt; r1.started_at&lt;/span&gt;
+&lt;span style="color:#33a02c;"&gt;&lt;b&gt;② GROUP BY&lt;/b&gt; r1.ride_id&lt;/span&gt;
+&lt;span style="color:#e31a1c;"&gt;&lt;b&gt;④ LIMIT&lt;/b&gt; 5;&lt;/span&gt;
+&lt;/pre&gt;
 
 .small[
 
-```sql
-SELECT c.name AS city,
-       COUNT(*) AS n_rides,
-       ROUND(AVG(r.fare_usd), 2) AS avg_fare
-FROM   rides r
-JOIN   requests req ON r.request_id = req.request_id
-JOIN   neighborhoods n ON req.pickup_nbhd_id = n.nbhd_id
-JOIN   cities c ON n.city_id = c.city_id
-GROUP BY c.name
-ORDER BY n_rides DESC;
-```
+Table: 5 records
 
+|ride_id | driver_id|started_at                 |previous_ride              |
+|:-------|---------:|:--------------------------|:--------------------------|
+|1       |       429|2025-08-19 00:07:40.051507 |2025-07-11 00:05:42.188794 |
+|2       |        83|2025-08-19 00:09:02.160463 |2025-08-17 00:07:54.489205 |
+|3       |       535|2025-01-04 00:05:37.120311 |2025-01-01 00:05:31.354864 |
+|4       |       101|2025-08-05 00:03:57.718588 |2025-07-25 00:07:44.473374 |
+|5       |        85|2025-06-13 00:03:00.10871  |2025-06-08 00:09:19.094344 |
+]
 
+---
+count: false
 
+# Self-Join: reading the aliases
+
+`r1` and `r2` are **two copies of the same table**, joined together. Treat them as two separate tables that just happen to share rows.
+
+| Alias | Role |
+|---|---|
+| `r1` | the **anchor** ride — the row we're computing "previous" for |
+| `r2` | a **candidate** previous ride — any earlier ride by the same driver |
+
+The two `ON` conditions narrow `r2` to *eligible* matches:
+
+1. `r1.driver_id = r2.driver_id` — same driver
+2. `r2.started_at &lt; r1.started_at` — earlier in time
+
+Then `MAX(r2.started_at)` after `GROUP BY r1.ride_id` picks the **most recent** of those earlier rides — the immediate predecessor. A driver's *first* ride has no eligible `r2`, so `previous_ride` is `NULL` (LEFT JOIN preserves it).
+
+**Window-function alternative** (Module 5): `LAG(started_at) OVER (PARTITION BY driver_id ORDER BY started_at)` does the same thing in one expression — cheaper and clearer. Self-join is the *pre*-window-function pattern; it still shows up in interviews because not every dialect/version has window functions.
+
+---
+
+# Pattern: Multi-table chain
+
+**Q:** I need a column that lives several joins away. How do I get it?
+**A:** Chain joins one hop at a time. Numerals = hop order.
+
+&lt;pre style="background:#f5f5f5;padding:0.6em 0.9em;border-radius:4px;font-family:'Source Code Pro',Menlo,monospace;font-size:90%;line-height:1.4;margin:0;"&gt;
+&lt;span style="color:#ff7f00;"&gt;&lt;b&gt;③ SELECT&lt;/b&gt; c.name &lt;b&gt;AS&lt;/b&gt; city,
+         &lt;b&gt;COUNT&lt;/b&gt;(*) &lt;b&gt;AS&lt;/b&gt; n_rides,
+         &lt;b&gt;ROUND&lt;/b&gt;(&lt;b&gt;AVG&lt;/b&gt;(r.fare_usd), 2) &lt;b&gt;AS&lt;/b&gt; avg_fare&lt;/span&gt;
+&lt;span style="color:#1f78b4;"&gt;&lt;b&gt;① FROM&lt;/b&gt;   rides r
+    &lt;b&gt;JOIN&lt;/b&gt;   requests      req &lt;b&gt;ON&lt;/b&gt; r.request_id       = req.request_id
+    &lt;b&gt;JOIN&lt;/b&gt;   neighborhoods n   &lt;b&gt;ON&lt;/b&gt; req.pickup_nbhd_id = n.nbhd_id
+    &lt;b&gt;JOIN&lt;/b&gt;   cities        c   &lt;b&gt;ON&lt;/b&gt; n.city_id          = c.city_id&lt;/span&gt;
+&lt;span style="color:#33a02c;"&gt;&lt;b&gt;② GROUP BY&lt;/b&gt; c.name&lt;/span&gt;
+&lt;span style="color:#e31a1c;"&gt;&lt;b&gt;④ ORDER BY&lt;/b&gt; n_rides &lt;b&gt;DESC&lt;/b&gt;;&lt;/span&gt;
+&lt;/pre&gt;
+
+.small[
 
 Table: 5 records
 
@@ -536,8 +585,8 @@ ORDER BY c.name, n_rides DESC;
 # Course Map
 
 &lt;table&gt;
-&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Ref&lt;/th&gt;&lt;/tr&gt;
-&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;SC&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Module&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Sample Code&lt;/th&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html"&gt;SELECT, WHERE, Aggregates&lt;/a&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;td&gt;&lt;a href="../module-01/slides.html#sample"&gt;M1&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;JOINs &lt;i&gt;(just finished)&lt;/i&gt;&lt;/td&gt;&lt;td&gt;✓ done&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;&lt;td&gt;&lt;b&gt;GROUP BY, HAVING, Conversion Funnels&lt;/b&gt;&lt;/td&gt;&lt;td&gt;next&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Subqueries and CTEs&lt;/td&gt;&lt;td&gt;upcoming&lt;/td&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;
