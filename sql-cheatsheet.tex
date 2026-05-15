@@ -1,0 +1,330 @@
+% SQL Cheat Sheet --- single-page landscape letter (scaffolding only)
+% Compile: pdflatex sql-cheatsheet.tex
+\documentclass[landscape,letterpaper,9pt]{extarticle}
+
+\usepackage[landscape,letterpaper,margin=0.35in]{geometry}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{lipsum}    % lorem ipsum filler
+
+% Tight spacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\setlength{\columnsep}{14pt}
+\setlength{\columnseprule}{0.2pt}
+\setlist[itemize]{leftmargin=*,topsep=0pt,partopsep=0pt,itemsep=1pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=*,topsep=0pt,partopsep=0pt,itemsep=1pt,parsep=0pt}
+
+\definecolor{hdg}{HTML}{1a237e}
+\definecolor{kw}{HTML}{0d47a1}
+\definecolor{str}{HTML}{2e7d32}
+\definecolor{cmt}{HTML}{757575}
+% Execution-order palette (matches M1 slide 8)
+\definecolor{stepFrom}{HTML}{1f78b4}
+\definecolor{stepWhere}{HTML}{33a02c}
+\definecolor{stepGroup}{HTML}{ff7f00}
+\definecolor{stepHaving}{HTML}{e31a1c}
+\definecolor{stepSelect}{HTML}{6a3d9a}
+\definecolor{stepOrder}{HTML}{b15928}
+\definecolor{stepLimit}{HTML}{555555}
+\definecolor{joinHop}{HTML}{00838f}
+
+\titleformat{\section}
+  {\normalfont\bfseries\color{hdg}\large}{}{0pt}{}[\titlerule]
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+
+\titleformat{\subsection}
+  {\normalfont\bfseries\color{hdg}\normalsize}{}{0pt}{}
+\titlespacing*{\subsection}{0pt}{4pt}{1pt}
+
+\lstdefinestyle{sql}{
+  language=SQL,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{kw},
+  commentstyle=\itshape\color{cmt},
+  stringstyle=\color{str},
+  showstringspaces=false,
+  breaklines=true,
+  xleftmargin=4pt,
+  belowskip=2pt,
+  aboveskip=2pt,
+  columns=fullflexible,
+  keepspaces=true,
+}
+\lstset{style=sql}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+\textbf{\Large SQL Cheat Sheet}
+\end{center}
+\vspace{-10pt}
+
+\begin{multicols*}{3}
+
+% ============================================================
+\section*{1. Core syntax \& execution order}
+\textcolor{cmt}{\scriptsize Written order $\ne$ execution order. Numerals = run order.}\\[1pt]
+{\scriptsize\textbf{Palette:}~%
+\textcolor{stepFrom}{\rule{6pt}{6pt}}\,1~~%
+\textcolor{stepWhere}{\rule{6pt}{6pt}}\,2~~%
+\textcolor{stepGroup}{\rule{6pt}{6pt}}\,3~~%
+\textcolor{stepHaving}{\rule{6pt}{6pt}}\,4~~%
+\textcolor{stepSelect}{\rule{6pt}{6pt}}\,5~~%
+\textcolor{stepOrder}{\rule{6pt}{6pt}}\,6~~%
+\textcolor{stepLimit}{\rule{6pt}{6pt}}\,7}\\[2pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{\hspace{0.5em}}l@{}}
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} SELECT}}   & \textcolor{stepSelect}{col1, col2, agg\_func(col3) \textbf{AS} result\_name} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}}       & \textcolor{stepFrom}{table\_name} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} WHERE}}     & \textcolor{stepWhere}{some\_condition} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} GROUP BY}}  & \textcolor{stepGroup}{col1, col2} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} HAVING}}   & \textcolor{stepHaving}{aggregate\_condition} \\
+\textcolor{stepOrder}{\textbf{\textcircled{\scriptsize 6} ORDER BY}}  & \textcolor{stepOrder}{col1 DESC} \\
+\textcolor{stepLimit}{\textbf{\textcircled{\scriptsize 7} LIMIT}}     & \textcolor{stepLimit}{10;} \\
+\end{tabular}}
+\end{minipage}}
+\\[2pt]
+\textcolor{cmt}{\scriptsize Alias from SELECT not usable in WHERE/GROUP BY (run earlier); is usable in ORDER BY.}
+
+% ============================================================
+\section*{2. Multi-table chain (JOIN hops)}
+\textit{\scriptsize Q: Column lives N joins away?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~c.name \textbf{AS} city, \textbf{COUNT}(*) \textbf{AS} n\_rides} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~rides r} \\
+\textcolor{stepFrom}{~~~~~~\textbf{JOIN}~~~requests req~~~~\textbf{ON} r.request\_id = req.request\_id} \\
+\textcolor{stepFrom}{~~~~~~\textbf{JOIN}~~~neighborhoods n~\textbf{ON} req.pickup\_nbhd\_id = n.nbhd\_id} \\
+\textcolor{stepFrom}{~~~~~~\textbf{JOIN}~~~cities c~~~~~~~~\textbf{ON} n.city\_id = c.city\_id} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} GROUP BY}~c.name} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} ORDER BY}~n\_rides \textbf{DESC};} \\
+\end{tabular}}
+\end{minipage}}
+\\[2pt]
+\textbf{\scriptsize Read aliases as a path:}~{\scriptsize \texttt{r} (rides) $\to$ \texttt{req} (requests) $\to$ \texttt{n} (neighborhoods) $\to$ \texttt{c} (cities).}\\[1pt]
+\textcolor{cmt}{\scriptsize Build it incrementally: run after each hop and check row count before adding the next.}\\[3pt]
+\textit{\scriptsize Q1: Distinct drivers per rider?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~req.rider\_id, \textbf{COUNT}(\textbf{DISTINCT} r.driver\_id) \textbf{AS} n\_uniq} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~rides r \textbf{JOIN} requests req \textbf{ON} r.request\_id = req.request\_id} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} GROUP BY}~req.rider\_id} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} ORDER BY}~n\_uniq \textbf{DESC}} \\
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize Trick: \texttt{COUNT(DISTINCT col)} after a JOIN dedupes the multiplied rows.}\\[3pt]
+\textit{\scriptsize Q2: Driver tenure at each ride?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} SELECT}~r.ride\_id, \textbf{ROUND}(julianday(r.started\_at)$-$julianday(d.signup\_date)) \textbf{AS} ten\_d} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~rides r \textbf{JOIN} drivers d \textbf{ON} r.driver\_id = d.driver\_id} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize SQLite date diff: \texttt{julianday(a)-julianday(b)} = days. Postgres: \texttt{a::date - b::date}.}\\[3pt]
+\textit{\scriptsize Q3: Rider-driver pairs with $\geq$3 5-star rides?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} SELECT}~req.rider\_id, r.driver\_id, \textbf{COUNT}(*) \textbf{AS} n\_5star} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~rides r \textbf{JOIN} requests req \textbf{ON} r.request\_id = req.request\_id} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} WHERE}~~r.rider\_rating = 5} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} GROUP BY}~req.rider\_id, r.driver\_id} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} HAVING}~\textbf{COUNT}(*) $\geq$ 3} \\
+\textcolor{stepOrder}{\textbf{\textcircled{\scriptsize 6} ORDER BY}~n\_5star \textbf{DESC}} \\
+\textcolor{stepLimit}{\textbf{\textcircled{\scriptsize 7} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize \textbf{WHERE} = filter rows pre-agg; \textbf{HAVING} = filter groups post-agg. Alias \texttt{n\_5star} can't be used in HAVING (runs before SELECT) — repeat the expression.}\\[3pt]
+\textit{\scriptsize Q4: Previous ride per driver? (self-join)}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~r1.ride\_id, r1.driver\_id, r1.started\_at, \textbf{MAX}(r2.started\_at) \textbf{AS} prev} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~rides r1} \\
+\textcolor{stepFrom}{~~~\textbf{LEFT JOIN} rides r2 \textbf{ON}~~r1.driver\_id = r2.driver\_id} \\
+\textcolor{stepFrom}{~~~~~~~~~~~~~~~~~~~~\textbf{AND} r2.started\_at $<$ r1.started\_at} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} GROUP BY}~r1.ride\_id} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize Trick: alias same table twice (r1/r2). Inequality in \texttt{ON} narrows r2 to "earlier same-driver rides"; \texttt{MAX} picks the most recent. First ride per driver $\to$ \texttt{NULL} (LEFT JOIN keeps it). Cleaner via \texttt{LAG()} in M5.}
+
+% ============================================================
+\section*{3. Aggregates \& dates}
+\textit{\scriptsize Q5: Monthly conversion rate?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~strftime('\%Y-\%m', requested\_at) \textbf{AS} month,} \\
+\textcolor{stepGroup}{~~~~~~~~~\textbf{ROUND}(1.0*\textbf{SUM}(accepted)/\textbf{COUNT}(*),3) \textbf{AS} rate} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~requests} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} GROUP BY}~month} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} ORDER BY}~month} \\
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} LIMIT}~6;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize SQLite month truncation: \texttt{strftime('\%Y-\%m', date)} (Postgres: \texttt{date\_trunc('month', d)}). Rate from boolean: \texttt{1.0*SUM(bool)/COUNT(*)} — the \texttt{1.0*} forces float (else integer division = 0).}
+
+% ============================================================
+\section*{4. Window functions}
+\textit{\scriptsize Q6: Top-1 per group (highest-fare ride per driver)?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} ranked \textbf{AS} ( \\
+~~\textbf{SELECT} driver\_id, ride\_id, fare\_usd, \\
+~~~~~~~~\textbf{ROW\_NUMBER}() \textbf{OVER} (\textbf{PARTITION BY} driver\_id \textbf{ORDER BY} fare\_usd \textbf{DESC}) \textbf{AS} rk \\
+~~\textbf{FROM} rides) \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~driver\_id, ride\_id, fare\_usd} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~ranked} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} WHERE}~~rk = 1} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} ORDER BY}~fare\_usd \textbf{DESC}} \\
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize Top-N per group recipe: \texttt{ROW\_NUMBER() OVER (PARTITION BY <grp> ORDER BY <col> DESC)} in a CTE, then filter \texttt{rk <= N}. Use \texttt{RANK} / \texttt{DENSE\_RANK} instead to keep ties.}\\[3pt]
+\textit{\scriptsize Q7: Rolling 7-day average?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} daily \textbf{AS} (\textbf{SELECT} date(started\_at) \textbf{AS} day, \textbf{COUNT}(*) \textbf{AS} n \\
+~~~~~~~~~~~~~~~~~~\textbf{FROM} rides \textbf{GROUP BY} day) \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} SELECT}~day, \textbf{ROUND}(\textbf{AVG}(n) \textbf{OVER} (\textbf{ORDER BY} day} \\
+\textcolor{stepWhere}{~~~~~~~~~~~~~~~~~\textbf{ROWS BETWEEN} 6 \textbf{PRECEDING AND CURRENT ROW}), 1) \textbf{AS} r7} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~daily} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} ORDER BY}~day} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} LIMIT}~7;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize Pre-aggregate (CTE) to 1 row per day so the window's \texttt{ROWS BETWEEN N PRECEDING AND CURRENT ROW} = N+1 days. SQLite supports \texttt{ROWS} but not \texttt{RANGE BETWEEN INTERVAL}.}\\[3pt]
+\textit{\scriptsize Q8: Bottom 10\% per city by accept rate?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} deciled \textbf{AS} ( \\
+~~\textbf{SELECT} *, \textbf{NTILE}(10) \textbf{OVER} (\textbf{PARTITION BY} city\_id \textbf{ORDER BY} accept\_rate) \textbf{AS} d \\
+~~\textbf{FROM} driver\_city) \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} SELECT}~*} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~deciled} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} WHERE}~~d = 1} \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} LIMIT}~5;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize \texttt{NTILE(k)} splits each partition into \emph{k} equal-size buckets numbered 1..k. Bottom decile = bucket 1; top decile = bucket 10. One-liner alternative to a correlated subquery.}
+
+% ============================================================
+\section*{5. Subqueries \& CTEs}
+\textit{\scriptsize Q9: Riders active in $\geq$N distinct weeks?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} active \textbf{AS} ( \\
+~~\textbf{SELECT DISTINCT} rider\_id, strftime('\%Y-\%W', requested\_at) \textbf{AS} wk \\
+~~\textbf{FROM} requests \\
+~~\textbf{WHERE} date(requested\_at) \textbf{BETWEEN} '2025-12-01' \textbf{AND} '2025-12-31') \\
+\textcolor{stepHaving}{\textbf{\textcircled{\scriptsize 4} SELECT}~rider\_id, \textbf{COUNT}(\textbf{DISTINCT} wk) \textbf{AS} n\_wk} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~active} \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} GROUP BY}~rider\_id} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} HAVING}~\textbf{COUNT}(\textbf{DISTINCT} wk) $\geq$ 4} \\
+\textcolor{stepSelect}{\textbf{\textcircled{\scriptsize 5} LIMIT}~3;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize CTE deduplicates to one row per (rider, week); outer HAVING filters groups whose distinct-week count clears the bar. Repeat the expression in HAVING (alias \texttt{n\_wk} not yet defined when HAVING runs).}\\[3pt]
+\textit{\scriptsize Q10: Conversion funnel via CTE chain (Dec requests $\to$ rides $\to$ 5-star)?}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} dec\_req \textbf{AS} ( \\
+~~\textbf{SELECT} request\_id \textbf{FROM} requests \\
+~~\textbf{WHERE} date(requested\_at) \textbf{BETWEEN} '2025-12-01' \textbf{AND} '2025-12-31'), \\
+~~~~~~ dec\_rides \textbf{AS} ( \\
+~~\textbf{SELECT} dr.*, r.ride\_id, r.rider\_rating \\
+~~\textbf{FROM} dec\_req dr \textbf{LEFT JOIN} rides r \textbf{ON} dr.request\_id = r.request\_id) \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} SELECT}~\textbf{COUNT}(*) \textbf{AS} n\_req,} \\
+\textcolor{stepWhere}{~~~~~~~~~~~\textbf{SUM}(ride\_id \textbf{IS NOT NULL}) \textbf{AS} n\_done,} \\
+\textcolor{stepWhere}{~~~~~~~~~~~\textbf{SUM}(rider\_rating = 5) \textbf{AS} n\_5star} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM}~~~dec\_rides;} \\
+\end{tabular}}
+\end{minipage}}
+\\[1pt]
+\textcolor{cmt}{\scriptsize Each CTE = one named step. \texttt{LEFT JOIN} keeps unmatched requests (NULL ride\_id $\to$ counted as "not completed"). \texttt{SUM(bool)} = count of true rows (SQLite/Postgres treat booleans as 0/1).}
+
+% ============================================================
+\section*{6. Capstone — City Dashboard (M1+M2+M3+M4+M5)}
+\textcolor{cmt}{\scriptsize \textbf{Computes:} per-city ride count, avg fare, and surge-ride share for cities with $\geq$500 rides since 2025-06-01 — ranked by avg fare descending. Same query as M5 \#16; one CTE, every clause earns its keep.}\\[1pt]
+\colorbox{black!4}{%
+\begin{minipage}{\dimexpr\linewidth-2pt}
+{\ttfamily\scriptsize
+\begin{tabular}{@{}l@{}}
+\textbf{WITH} city\_stats \textbf{AS} ( \\
+\textcolor{cmt}{\itshape ~~M4: CTE wraps the prep} \\
+\textcolor{stepSelect}{~~\textbf{\textcircled{\scriptsize 5} SELECT} c.name \textbf{AS} city, \textbf{COUNT}(*) \textbf{AS} n\_rides,} \\
+\textcolor{cmt}{\itshape ~~M1: project + COUNT aggregate} \\
+\textcolor{stepSelect}{~~~~\textbf{ROUND}(\textbf{AVG}(r.fare\_usd), 2) \textbf{AS} avg\_fare,} \\
+\textcolor{cmt}{\itshape ~~M1: AVG aggregate} \\
+\textcolor{stepSelect}{~~~~\textbf{SUM}(\textbf{CASE WHEN} r.surge\_mult $>$ 1 \textbf{THEN} 1 \textbf{ELSE} 0 \textbf{END}) \textbf{AS} n\_surged} \\
+\textcolor{cmt}{\itshape ~~M3: CASE WHEN conditional count} \\
+\textcolor{stepFrom}{~~\textbf{\textcircled{\scriptsize 1} FROM} rides r} \\
+\textcolor{cmt}{\itshape ~~M2: alias rides} \\
+\textcolor{stepFrom}{~~\textbf{JOIN} requests req \textbf{ON} r.request\_id = req.request\_id} \\
+\textcolor{cmt}{\itshape ~~M2: chain hop 1} \\
+\textcolor{stepFrom}{~~\textbf{JOIN} neighborhoods n \textbf{ON} req.pickup\_nbhd\_id = n.nbhd\_id} \\
+\textcolor{cmt}{\itshape ~~M2: chain hop 2} \\
+\textcolor{stepFrom}{~~\textbf{JOIN} cities c \textbf{ON} n.city\_id = c.city\_id} \\
+\textcolor{cmt}{\itshape ~~M2: chain hop 3} \\
+\textcolor{stepWhere}{~~\textbf{\textcircled{\scriptsize 2} WHERE} date(r.started\_at) $\geq$ '2025-06-01'} \\
+\textcolor{cmt}{\itshape ~~M1: filter rows (pre-agg)} \\
+\textcolor{stepGroup}{~~\textbf{\textcircled{\scriptsize 3} GROUP BY} c.name} \\
+\textcolor{cmt}{\itshape ~~M3: 1 row per city} \\
+\textcolor{stepHaving}{~~\textbf{\textcircled{\scriptsize 4} HAVING} \textbf{COUNT}(*) $>$ 500} \\
+\textcolor{cmt}{\itshape ~~M3: filter groups (post-agg)} \\
+) \\
+\textcolor{stepWhere}{\textbf{\textcircled{\scriptsize 2} SELECT} city, n\_rides, avg\_fare, n\_surged,} \\
+\textcolor{cmt}{\itshape ~~outer: project CTE columns} \\
+\textcolor{stepWhere}{~~\textbf{RANK}() \textbf{OVER} (\textbf{ORDER BY} avg\_fare \textbf{DESC}) \textbf{AS} fare\_rank,} \\
+\textcolor{cmt}{\itshape ~~M5: window rank} \\
+\textcolor{stepWhere}{~~\textbf{ROUND}(1.0 * n\_surged / n\_rides, 3) \textbf{AS} surge\_pct} \\
+\textcolor{cmt}{\itshape ~~M1: rate (1.0* forces float div)} \\
+\textcolor{stepFrom}{\textbf{\textcircled{\scriptsize 1} FROM} city\_stats} \\
+\textcolor{cmt}{\itshape ~~M4: read the CTE} \\
+\textcolor{stepGroup}{\textbf{\textcircled{\scriptsize 3} ORDER BY} fare\_rank;} \\
+\textcolor{cmt}{\itshape ~~M1: final sort} \\
+\end{tabular}}
+\end{minipage}}
+
+\end{multicols*}
+\end{document}
